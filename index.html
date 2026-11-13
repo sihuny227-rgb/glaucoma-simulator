@@ -1,0 +1,1590 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="방수 생성·배출과 시신경 손상을 눈 애니메이션으로 보여 주고, 녹내장 약의 작용 자리, 급성·만성 폐쇄각, 감기약 등 다른 약이 어떤 녹내장에서 왜 위험한지 직접 켜 보는 교육용 시뮬레이터">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>녹내장 안압 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  /* Layout: header + 4 eye modes → [eye stage (anterior segment + optic nerve head) + drug/risk switches | live readouts: IOP, Goldmann, nerve clock, 24h curve] → target table, drug atlas, risk-drug matrix, counselling.
+     Color is reserved for physiology: blue = 방수·섬유주 경로, violet = 포도막공막·프로스타노이드, amber = 아드레날린성(β·α), teal = 콜린성(M3), magenta = 치료 약물, red = 악화·경고. UI chrome stays ink-neutral. */
+  --bg:#EEF2F5;--surface:#FFFFFF;--surface-2:#E4EBF0;--ink:#101B25;--ink-2:#465765;--ink-3:#778795;--line:#CFD9E1;
+  --adr:#C46A12;--adr-soft:#F8E5CF;--chol:#0F7E6C;--chol-soft:#CDEDE5;--conv:#2A66D2;--conv-soft:#D9E5FA;--uveo:#6847D8;--uveo-soft:#E4DEFA;--enz:#56636F;--enz-soft:#E2E7EC;
+  --aq:#1A93D1;--aqf:#DCEFFA;--vit:#F4F7FA;--cornea:#B9DDF1;--cornea-edge:#6FA9CF;--haze:#FFFFFF;--sclera:#F7F3EC;--sclera-edge:#C7BDAE;
+  --iris:#8C5C3C;--iris-deep:#5A3822;--lens:#F3E4BB;--lens-edge:#C9AE6E;--cb:#D9A397;--cb-deep:#A0574B;--vessel:#C8343A;--effusion:#E8CF6E;
+  --retina:#E6A493;--choroid:#A2463A;--axon:#E2AE2A;--axon-soft:#F6E7B9;--axon-dot:#7A4E00;--fundus:#D46A44;--disc:#F3C79C;--cup:#FCF1E2;--vf-bg:#F2F4F6;--vf-def:#27303A;
+  --drug:#C4287A;--drug-soft:#F9D8E8;--danger:#C22A2A;--danger-soft:#F9DCDC;--ok:#23824A;--ok-soft:#D6EEDD;
+  --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A1016;--surface:#111921;--surface-2:#18222C;--ink:#E1E9EF;--ink-2:#9EAFBC;--ink-3:#6E7F8C;--line:#25323D;
+  --adr:#EE9A45;--adr-soft:#3A2713;--chol:#3CC3A6;--chol-soft:#0F332D;--conv:#6EA6FF;--conv-soft:#15294A;--uveo:#9D89FF;--uveo-soft:#251F45;--enz:#A5B3BF;--enz-soft:#222D37;
+  --aq:#4FC0F0;--aqf:#0F2738;--vit:#121C25;--cornea:#1D4660;--cornea-edge:#4E8AB0;--haze:#C9D7E2;--sclera:#2A3037;--sclera-edge:#4B545E;
+  --iris:#9A6A49;--iris-deep:#C99068;--lens:#4A4330;--lens-edge:#8F7D4D;--cb:#80493F;--cb-deep:#D48E81;--vessel:#F05A5F;--effusion:#8C7A2C;
+  --retina:#94584C;--choroid:#6A2A23;--axon:#E7B93C;--axon-soft:#433817;--axon-dot:#FFE08A;--fundus:#8A3E27;--disc:#C79A6E;--cup:#EADCC6;--vf-bg:#CBD3DA;--vf-def:#1A2027;
+  --drug:#F25BA6;--drug-soft:#3D1A2D;--danger:#F26B6B;--danger-soft:#3C1B1B;--ok:#5CC27C;--ok-soft:#173523;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1016;--surface:#111921;--surface-2:#18222C;--ink:#E1E9EF;--ink-2:#9EAFBC;--ink-3:#6E7F8C;--line:#25323D;
+  --adr:#EE9A45;--adr-soft:#3A2713;--chol:#3CC3A6;--chol-soft:#0F332D;--conv:#6EA6FF;--conv-soft:#15294A;--uveo:#9D89FF;--uveo-soft:#251F45;--enz:#A5B3BF;--enz-soft:#222D37;
+  --aq:#4FC0F0;--aqf:#0F2738;--vit:#121C25;--cornea:#1D4660;--cornea-edge:#4E8AB0;--haze:#C9D7E2;--sclera:#2A3037;--sclera-edge:#4B545E;
+  --iris:#9A6A49;--iris-deep:#C99068;--lens:#4A4330;--lens-edge:#8F7D4D;--cb:#80493F;--cb-deep:#D48E81;--vessel:#F05A5F;--effusion:#8C7A2C;
+  --retina:#94584C;--choroid:#6A2A23;--axon:#E7B93C;--axon-soft:#433817;--axon-dot:#FFE08A;--fundus:#8A3E27;--disc:#C79A6E;--cup:#EADCC6;--vf-bg:#CBD3DA;--vf-def:#1A2027;
+  --drug:#F25BA6;--drug-soft:#3D1A2D;--danger:#F26B6B;--danger-soft:#3C1B1B;--ok:#5CC27C;--ok-soft:#173523;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1260px;margin:0 auto;padding-block:28px 72px}
+b,strong{font-weight:600}
+button{font-family:inherit}
+a{color:var(--conv)}
+:focus-visible{outline:2px solid var(--conv);outline-offset:2px}
+
+/* semantic color classes */
+.adr{--c:var(--adr);--s:var(--adr-soft)} .chol{--c:var(--chol);--s:var(--chol-soft)} .conv{--c:var(--conv);--s:var(--conv-soft)}
+.uveo{--c:var(--uveo);--s:var(--uveo-soft)} .enz{--c:var(--enz);--s:var(--enz-soft)} .ink{--c:var(--ink-2);--s:var(--surface-2)}
+.drugc{--c:var(--drug);--s:var(--drug-soft)} .dang{--c:var(--danger);--s:var(--danger-soft)} .okc{--c:var(--ok);--s:var(--ok-soft)}
+.c-adr{color:var(--adr)} .c-chol{color:var(--chol)} .c-conv{color:var(--conv)} .c-uveo{color:var(--uveo)} .c-enz{color:var(--enz)} .c-dang{color:var(--danger)}
+.rtag{display:inline-block;font:600 11.5px/1.5 var(--mono);padding:1px 8px;border-radius:999px;color:var(--c);background:var(--s);white-space:nowrap}
+
+/* header */
+header.top{display:grid;gap:12px;margin-bottom:22px}
+.eyebrow{font:600 11.5px/1.2 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:0}
+h1{font-size:clamp(27px,3.4vw,38px);line-height:1.15;letter-spacing:-.025em;margin:0;font-weight:700;text-wrap:balance}
+.lead{margin:0;max-width:70ch;color:var(--ink-2)}
+.modes{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--surface-2);border-radius:12px;width:fit-content;max-width:100%;margin-top:4px}
+.mode{appearance:none;border:0;background:transparent;color:var(--ink-2);font:600 14.5px var(--font);padding:9px 16px;border-radius:9px;cursor:pointer}
+.mode:hover{color:var(--ink)}
+.mode[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 1px 3px rgba(0,0,0,.06)}
+.mode small{font:500 11px var(--mono);color:var(--ink-3);margin-left:6px}
+
+/* main grid */
+.main{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1040px){.main{grid-template-columns:minmax(0,1fr)}}
+.stage,.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;min-width:0}
+.stage{overflow:hidden}
+.svgbox{overflow-x:auto}
+#stage{display:block;width:100%;min-width:640px;height:auto;font-family:var(--font);user-select:none;-webkit-user-select:none}
+
+.ctrl{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.btn{appearance:none;font:600 14px var(--font);padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:1.2}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.primary:hover{opacity:.9}
+.btn.sm{font-size:13px;padding:6px 11px}
+.tnote{font-size:12px;color:var(--ink-3);margin-left:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:0 16px 14px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;background:var(--c)}
+.legend i.dot{width:8px;height:8px;border-radius:50%}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--c) 0 3px,transparent 3px 7px)}
+
+.drugs{padding:14px 16px 16px;border-top:1px solid var(--line);display:grid;gap:10px}
+.drugs .sh span{font-weight:400;color:var(--ink-3);font-size:12.5px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:8px}
+.dchip{appearance:none;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:11px;padding:10px 12px;cursor:pointer;display:grid;gap:1px;min-width:0;align-content:start}
+.dchip:hover{background:var(--surface-2)}
+.dchip .dt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dchip b{font-size:14px;line-height:1.35}
+.dchip .ds{font-size:12px;color:var(--ink-2)}
+.dchip .dx{font-size:11.5px;color:var(--ink-3)}
+.sw{flex:none;width:30px;height:17px;border-radius:9px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);position:relative;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--surface);box-shadow:0 0 0 1px var(--line);transition:transform .15s}
+.dchip[aria-pressed="true"]{border-color:var(--drug);background:var(--drug-soft)}
+.dchip[aria-pressed="true"] .sw{background:var(--drug);box-shadow:none}
+.dchip[aria-pressed="true"] .sw::after{transform:translateX(13px);box-shadow:none}
+.dchip.bad{border-style:dashed}
+.dchip.bad[aria-pressed="true"]{border-color:var(--danger);background:var(--danger-soft);border-style:solid}
+.dchip.bad[aria-pressed="true"] .sw{background:var(--danger)}
+.dchip.proc{border-style:dotted}
+.pgarow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13px;color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:3px;padding:3px;background:var(--surface-2);border-radius:9px}
+.scenes{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13px;color:var(--ink-2)}
+.scenes .sclbl{font:600 11.5px var(--mono);letter-spacing:.06em;color:var(--ink-3)}
+.scenes .seg button{font-size:13.5px;padding:6px 12px}
+.scnote{color:var(--ink-2);font-size:13px;max-width:62ch;min-width:0}
+.seg button{appearance:none;border:0;background:transparent;color:var(--ink-2);font:600 13px var(--font);padding:5px 11px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+
+.info{padding:16px 16px 18px;border-top:1px solid var(--line);display:grid;gap:8px;align-content:start}
+.info .ih{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.info h3{margin:0;font-size:16.5px;letter-spacing:-.01em}
+.info dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin:2px 0 0;font-size:13.5px}
+.info dt{color:var(--ink-3)}
+.info dd{margin:0;min-width:0}
+.info p{margin:0;max-width:74ch}
+.info .eff{font-size:14.5px}
+.info .note{font-size:13px;color:var(--ink-2)}
+.info .now{font-size:14px;padding:9px 12px;border-radius:10px;background:var(--surface-2)}
+.info .now.badn{background:var(--danger-soft)}
+.info .now.goodn{background:var(--ok-soft)}
+.idr{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.idr>span{color:var(--ink-3);margin-right:2px}
+.idr em{font-style:normal;padding:2px 9px;border-radius:999px;background:var(--drug-soft);color:var(--drug);font-weight:600}
+.eve{display:inline-flex;align-items:center;gap:3px;margin-left:5px;padding:0 7px 0 6px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font:500 11px/1.6 var(--font);white-space:nowrap;vertical-align:1px}
+.eve::before{content:"";width:10px;height:10px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/%3E%3C/svg%3E") center/contain no-repeat}
+.keylist{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:5px;font-size:13.5px}
+.keylist b{margin-right:4px}
+.kx{display:inline-block;width:20px;height:11px;border-radius:6px;margin-right:8px;vertical-align:-1px}
+.k0{width:9px;height:9px;border-radius:50%;background:var(--aq);margin-right:19px}
+.k1{height:3px;vertical-align:3px;background:repeating-linear-gradient(90deg,var(--conv) 0 3px,transparent 3px 7px)}
+.k2{height:3px;vertical-align:3px;background:repeating-linear-gradient(90deg,var(--uveo) 0 3px,transparent 3px 7px)}
+.k3{border:2px solid var(--drug);background:linear-gradient(150deg,transparent 40%,var(--drug) 40% 60%,transparent 60%)}
+.k4{border:2px solid var(--danger);background:var(--danger-soft)}
+
+/* panel */
+.panel{display:grid}
+.panel>section{padding:16px 18px;border-top:1px solid var(--line);min-width:0}
+.panel>section:first-child{border-top:0}
+.sh{margin:0 0 10px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sh small{font-weight:400;color:var(--ink-3);font-size:12px}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{font:700 13.5px var(--font);padding:4px 12px;border-radius:999px;background:var(--surface-2);color:var(--ink)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--adr-soft);color:var(--adr)}
+.pill.alert{background:var(--danger-soft);color:var(--danger)}
+#phSub{color:var(--ink-2);font-size:14px}
+.alert{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--danger-soft);color:var(--ink);font-size:13.5px;display:grid;gap:8px;justify-items:start}
+.alert p{margin:0}
+.iopn{display:flex;align-items:baseline;gap:8px;margin-top:14px;flex-wrap:wrap}
+.iopn .lbl{font-size:13px;color:var(--ink-2);margin-right:auto}
+.iopn .lbl small{color:var(--ink-3);font-size:11.5px;margin-left:4px}
+.iopn b{font:600 34px/1 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.iopn .u{font:500 12px var(--mono);color:var(--ink-3)}
+.iopn b.hi{color:var(--danger)} .iopn b.mid{color:var(--adr)} .iopn b.okv{color:var(--ok)}
+.gtrack{position:relative;height:12px;border-radius:6px;background:var(--surface-2);margin-top:8px}
+.gtrack .band{position:absolute;top:0;bottom:0;left:16.67%;width:18.33%;background:var(--ok-soft);border-radius:2px}
+.gtrack>i{position:absolute;inset:0 auto 0 0;width:0;border-radius:6px;background:var(--aq);opacity:.9}
+.gtrack>i.hi{background:var(--danger)} .gtrack>i.mid{background:var(--adr)}
+.gtrack>em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink);border-radius:1px}
+.gticks{position:relative;height:16px;font:500 10.5px var(--mono);color:var(--ink-3)}
+.gticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.gticks span:first-child{transform:none}
+.gticks span:last-child{transform:translateX(-100%)}
+.gnote{font-size:12px;color:var(--ink-3)}
+.eq{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--surface-2);display:grid;gap:2px}
+.eq .f{font:600 13px var(--mono)}
+.eq .n{font:500 12.5px var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.eq .n b{color:var(--ink)}
+.eq .k{font-size:11.5px;color:var(--ink-3)}
+.nbars{display:grid;gap:7px;margin-top:14px}
+.nb{display:grid;grid-template-columns:128px minmax(0,1fr) 86px;align-items:center;gap:10px;font-size:13px}
+.nb .nm::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:1px}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--c);border-radius:4px}
+.nb .v{font:500 11.5px var(--mono);color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+#stats{margin:12px 0 0;display:grid;gap:0}
+.st{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);align-items:baseline}
+.st:last-child{border-bottom:0}
+.st dt{font-size:13.5px;color:var(--ink-2)}
+.st dd{margin:0;display:flex;gap:10px;align-items:baseline;justify-content:flex-end;text-align:right}
+.st dd b{font:600 14px var(--mono);font-variant-numeric:tabular-nums}
+.st dd span{font-size:11.5px;color:var(--ink-3);min-width:84px}
+.st.bad dd b{color:var(--danger)} .st.good dd b{color:var(--ok)}
+.sxrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.sxrow .sx{font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-3)}
+.sxrow .sx.on{border-color:var(--danger);color:var(--danger);background:var(--danger-soft);font-weight:600}
+.sxrow .sx.side.on{border-color:var(--drug);color:var(--drug);background:var(--drug-soft)}
+.fine{font-size:11.5px;color:var(--ink-3);margin:10px 0 0}
+.clock{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.clock b{font:600 22px var(--mono);font-variant-numeric:tabular-nums}
+.clock span{font-size:12.5px;color:var(--ink-2)}
+.rate{font-size:13.5px;margin:6px 0 0}
+.rate.badr{color:var(--danger)} .rate.goodr{color:var(--ok)}
+#chart{display:block;width:100%;height:190px}
+.cleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-2);margin-top:6px}
+.cleg i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+.cstat{font-size:13px;color:var(--ink-2);margin:8px 0 0}
+.cstat b{font-family:var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:4px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:24px minmax(0,1fr);gap:1px 10px;padding:8px 10px;border-radius:10px;opacity:.55;transition:opacity .25s,background .25s}
+.steps li::before{content:counter(s);grid-row:span 2;width:22px;height:22px;border-radius:50%;background:var(--surface-2);font:600 12px/22px var(--mono);text-align:center;color:var(--ink-2)}
+.steps li.now{opacity:1;background:var(--surface-2)}
+.steps li.now::before{background:var(--ink);color:var(--surface)}
+.steps b{font-size:14px}
+.steps p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.55}
+.chk{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.chk li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:1px 10px;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
+.chk li::before{content:"";grid-row:span 2;width:18px;height:18px;margin-top:2px;border-radius:50%;border:2px solid var(--ink-3)}
+.chk li.done::before{border-color:var(--ok);background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/12px no-repeat}
+.chk li.wrong{background:var(--danger-soft)}
+.chk li.wrong::before{border-color:var(--danger)}
+.chk b{font-size:14px}
+.chk p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.55}
+.prob{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pb{display:grid;gap:3px;width:100%;text-align:left;background:transparent;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;color:inherit;font:inherit}
+.pb:hover{background:var(--surface-2)}
+.pb .rtag{justify-self:start}
+.pb b{font-size:14px}
+.pb>span:last-child{font-size:13px;color:var(--ink-2);line-height:1.55}
+.tgt{margin:10px 0 0;font-size:13.5px;padding:9px 12px;border-radius:10px;background:var(--surface-2)}
+.tgt.good{background:var(--ok-soft)} .tgt.bad{background:var(--adr-soft)}
+.og+.og{margin-top:12px}
+.og h4{margin:0 0 4px;font-size:13.5px}
+.og ul{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:13px}
+.og li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;color:var(--ink-2)}
+.og li span{color:var(--ink)}
+.muted{color:var(--ink-3);font-size:13px;margin:0}
+
+/* reference sections */
+.ref{margin-top:56px}
+.ref-h{display:grid;gap:6px;margin-bottom:18px}
+.ref-h h2{margin:0;font-size:clamp(22px,2.4vw,27px);letter-spacing:-.02em;text-wrap:balance}
+.ref-h .sub{margin:0;max-width:72ch;color:var(--ink-2)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:920px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+th{font-size:12px;font-weight:600;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td:first-child{white-space:nowrap}
+td small{display:block;color:var(--ink-3);font-size:12px}
+.lv{display:inline-block;font:600 11.5px/1.5 var(--font);padding:1px 8px;border-radius:999px;margin-bottom:3px;white-space:nowrap}
+.lv.hi{background:var(--danger-soft);color:var(--danger)} .lv.mid{background:var(--adr-soft);color:var(--adr)} .lv.lo{background:var(--ok-soft);color:var(--ok)} .lv.all{background:var(--surface-2);color:var(--ink-2)}
+.risktbl td:first-child{white-space:normal;min-width:170px}
+.risktbl td:first-child b{display:block}
+.ag+.ag{margin-top:26px}
+.ag h3{margin:0 0 10px;font-size:16px}
+.ag h3 span{font-weight:400;color:var(--ink-3);font-size:13.5px;margin-left:6px}
+.acards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.dcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:10px;align-content:start;min-width:0;scroll-margin-top:16px}
+.dcard header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dcard h4{margin:0;font-size:16px}
+.dcard dl{margin:0;display:grid;gap:2px}
+.dcard dt{font-size:11.5px;font-weight:600;color:var(--ink-3);letter-spacing:.02em;margin-top:6px}
+.dcard dt:first-child{margin-top:0}
+.dcard dd{margin:0;font-size:13.5px;line-height:1.55}
+.dcard .drop{font:600 13px var(--mono)}
+.sel{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:4px}
+.sel li{display:grid;grid-template-columns:minmax(0,1fr);font-size:13.5px;line-height:1.5}
+.sel li span{color:var(--ink-2);font-size:12.5px}
+.cl{margin:2px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2);display:grid;gap:2px}
+.dcard .btn{justify-self:start;margin-top:2px}
+.combo{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.combo li{display:grid;gap:2px;font-size:13.5px}
+.combo li span{color:var(--ink-2)}
+.callouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:16px}
+.co{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:8px;align-content:start}
+.co.warn{background:var(--danger-soft);border-color:transparent}
+.co h3{margin:0;font-size:16px}
+.co p{margin:0;font-size:14px;color:var(--ink-2);line-height:1.6}
+.co.warn p{color:var(--ink)}
+.co ol{margin:0;padding-left:20px;font-size:14px;display:grid;gap:3px}
+.twocol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.twocol{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-width:0;display:grid;gap:12px;align-content:start}
+.box h3{margin:0;font-size:18px}
+.box>p{margin:0;color:var(--ink-2);font-size:14px}
+.edu{list-style:none;counter-reset:e;margin:0;padding:0;display:grid}
+.edu li{counter-increment:e;display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 10px;padding:11px 0;border-top:1px solid var(--line)}
+.edu li::before{content:counter(e);grid-row:span 2;width:24px;height:24px;border-radius:50%;background:var(--surface-2);font:600 12px/24px var(--mono);text-align:center;color:var(--ink-2)}
+.edu b{font-size:14.5px}
+.edu p{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.tl{display:grid;gap:6px}
+.tlbar{display:grid;grid-template-columns:3fr 5fr 4fr 12fr;height:30px;border-radius:8px;overflow:hidden;font:600 11.5px/30px var(--font);text-align:center}
+.tlbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.tl0{background:var(--surface-2);color:var(--ink-3)} .tl1{background:var(--uveo-soft);color:var(--uveo)} .tl2{background:var(--uveo);color:var(--surface)} .tl3{background:var(--uveo-soft);color:var(--uveo)}
+.tlax{display:grid;grid-template-columns:3fr 5fr 4fr 12fr;font:500 11px var(--mono);color:var(--ink-3)}
+.tlax span:last-child{display:flex;justify-content:space-between}
+.why{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.why li{font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.why li b{color:var(--ink);display:block;font-size:14px}
+.caut{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.ci{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:6px;align-content:start}
+.ci h4{margin:0;font-size:15px}
+.ci p{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.ci .rtag{justify-self:start}
+.ref>p.after{margin:14px 0 0;color:var(--ink-2);font-size:14px;max-width:74ch}
+.tbl .btn{white-space:nowrap}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:12.5px;max-width:84ch}
+
+/* ===== SVG ===== */
+.t-l{font-size:12.5px;font-weight:600;fill:var(--ink)}
+.t-s{font-size:11px;fill:var(--ink-2)}
+.t-cap{font-size:11px;font-weight:600;fill:var(--ink-2)}
+.t-m{font:600 11.5px var(--mono);fill:var(--ink)}
+.t-in{font-size:12px;font-weight:600;fill:var(--ink-2);opacity:.75}
+.t-warn{font-size:12px;font-weight:700;fill:var(--danger)}
+.t-pas{font-size:12px;font-weight:700;fill:var(--iris-deep)}
+.pas{fill:var(--iris-deep);stroke:var(--iris-deep);stroke-width:1}
+.hit{cursor:pointer}
+.leader{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:2 3;fill:none}
+.vit{fill:var(--vit)}
+.acfill{fill:var(--aqf)}
+.sclera{fill:var(--sclera);stroke:var(--sclera-edge);stroke-width:1}
+.cornea{fill:var(--cornea);fill-opacity:.6;stroke:var(--cornea-edge);stroke-width:1.2}
+.haze{fill:var(--haze);opacity:0;pointer-events:none}
+.flush{fill:none;stroke:var(--vessel);stroke-width:9;stroke-linecap:round;opacity:0;pointer-events:none}
+.cbody{fill:var(--cb);stroke:var(--cb-deep);stroke-width:1}
+.cmus{fill:var(--cb-deep);opacity:.42;pointer-events:none}
+.effu{fill:var(--effusion);opacity:.9;pointer-events:none}
+.lens{fill:var(--lens);stroke:var(--lens-edge);stroke-width:1.2}
+.zon{stroke:var(--ink-3);stroke-width:.8;stroke-dasharray:2 2;fill:none;opacity:.8;pointer-events:none}
+.iris{fill:var(--iris);stroke:var(--iris-deep);stroke-width:1}
+.sph{fill:var(--chol);opacity:.8;pointer-events:none}
+.dil{fill:none;stroke:var(--adr);stroke-width:2.2;stroke-linecap:round;opacity:.9;pointer-events:none}
+.tm{fill:url(#tmPat);stroke:var(--conv);stroke-width:1}
+.tm-bg{fill:var(--conv-soft)} .tm-ln{stroke:var(--conv);stroke-width:1.2}
+.tmc{fill:var(--danger);opacity:0;pointer-events:none}
+.spur{fill:var(--sclera-edge)}
+.schlemm{fill:var(--aqf);stroke:var(--conv);stroke-width:1.2}
+.coll{stroke:var(--conv);stroke-width:1.4}
+.vein{fill:var(--vessel)}
+.route{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 5;pointer-events:none}
+.route.cv{stroke:var(--conv)} .route.us{stroke:var(--uveo)}
+.lpi{fill:var(--aqf);stroke:var(--drug);stroke-width:1.8}
+#parts{pointer-events:none}
+.part{fill:var(--aq)}
+.part.pv{fill:var(--vessel)}
+.part.pu{fill:var(--uveo)}
+.part.tr{fill:var(--ink)}
+.trring{fill:none;stroke:var(--ink);stroke-width:1.4;pointer-events:none}
+.brk{fill:none;stroke:var(--ink-3);stroke-width:1.2}
+.inset{fill:var(--surface-2)}
+.retina{fill:var(--retina)} .choroid{fill:var(--choroid)} .scl2{fill:var(--sclera);stroke:var(--sclera-edge);stroke-width:1}
+.rnfl{fill:var(--axon)} .rim{fill:var(--axon-soft)} .cupc{fill:var(--vit);stroke:var(--axon);stroke-width:1}
+.lam{fill:none;stroke:var(--ink-2);stroke-width:6;stroke-dasharray:2.2 2.4}
+.lam.weak{stroke-dasharray:1.2 3.4;stroke:var(--ink-3)}
+.nerve{fill:var(--axon-soft)}
+.sheath{stroke:var(--ink-3);stroke-width:1.4;fill:none}
+.fiber{fill:none;stroke:var(--axon);stroke-width:1.5;opacity:.95}
+.adot{fill:var(--axon-dot)}
+.parr{stroke:var(--ink-3);stroke-width:2.4;stroke-linecap:round;fill:none}
+.parh{fill:var(--ink-3)}
+.parr.hi{stroke:var(--danger)} .parh.hi{fill:var(--danger)}
+.fun{fill:var(--fundus)} .disc{fill:var(--disc)} .cup{fill:var(--cup)}
+.fves{fill:none;stroke:var(--vessel);stroke-linecap:round}
+.vfbg{fill:var(--vf-bg);stroke:var(--line)}
+.vfd{fill:var(--vf-def);pointer-events:none}
+.vfs{fill:none;stroke:var(--vf-def);pointer-events:none}
+.vfax{stroke:var(--ink-3);stroke-width:.8;opacity:.5}
+.rcp{cursor:pointer}
+.rcp .body{fill:var(--s);stroke:var(--c);stroke-width:1.6}
+.rcp .lbl{font:600 11px var(--mono);fill:var(--c);pointer-events:none}
+.rcp .lbl.sm{font-size:9px}
+.rcp.boost .body{fill:var(--c)}
+.rcp.boost .lbl{fill:var(--surface)}
+.rcp .ring{fill:none;stroke:var(--drug);stroke-width:2.4;opacity:0}
+.rcp.boost .ring{opacity:1;animation:pulse 1.3s ease-in-out infinite}
+.rcp.hot .ring{opacity:1;stroke:var(--c);animation:pulse 1s ease-in-out infinite}
+.rcp.bad .ring{stroke:var(--danger)}
+.rcp .slash{stroke:var(--drug);stroke-width:3;stroke-linecap:round;opacity:0;pointer-events:none}
+.rcp.blocked .slash{opacity:1}
+.rcp.blocked.bad .slash{stroke:var(--danger)}
+.rcp.blocked .body{stroke-dasharray:3 2}
+.rcp .selr{fill:none;stroke:var(--ink);stroke-width:1.5;opacity:0;pointer-events:none}
+.rcp.sel .selr{opacity:1}
+.rcp:focus{outline:none}
+.rcp:focus-visible .selr{opacity:1;stroke:var(--conv)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+@media (prefers-reduced-motion: reduce){
+  .rcp.boost .ring,.rcp.hot .ring{animation:none}
+  .steps li,.sw,.sw::after{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">안압·방수 약리 · Glaucoma</p>
+  <h1>녹내장 안압 시뮬레이터</h1>
+  <p class="lead">눈 속 물(방수)이 <b>만들어지고 빠져나가는 길</b>과, 그 균형이 깨질 때 <b>시신경이 어떻게 상하는지</b> 직접 돌려 보세요. 녹내장 약이 실제로 붙는 자리, 그리고 감기약 같은 다른 약이 <b>어떤 녹내장에서 왜</b> 위험한지도 같은 그림에서 확인할 수 있습니다.</p>
+  <div class="modes" role="tablist" aria-label="눈 상태 선택">
+    <button type="button" class="mode" role="tab" data-mode="normal" aria-selected="true">정상 눈</button>
+    <button type="button" class="mode" role="tab" data-mode="poag" aria-selected="false">개방각녹내장<small>POAG</small></button>
+    <button type="button" class="mode" role="tab" data-mode="ntg" aria-selected="false">정상안압녹내장<small>NTG</small></button>
+    <button type="button" class="mode" role="tab" data-mode="pacg" aria-selected="false">폐쇄각녹내장<small>PACG</small></button>
+  </div>
+  <div class="scenes" id="scenes" hidden>
+    <span class="sclbl">장면</span>
+    <div class="seg" role="group" aria-label="폐쇄각 장면 선택">
+      <button type="button" data-scene="base" aria-pressed="true">평소 (좁은 각)</button>
+      <button type="button" data-scene="acute" aria-pressed="false">급성 발작 보기</button>
+      <button type="button" data-scene="chronic" aria-pressed="false">만성 폐쇄각 보기</button>
+    </div>
+    <span class="scnote" id="sceneNote"></span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="stage" id="stageCard">
+    <div class="svgbox">
+    <svg id="stage" viewBox="0 0 780 560" role="img" aria-labelledby="stageTitle">
+      <title id="stageTitle">눈 앞부분 단면(각막·홍채·수정체·모양체·전방각)과 시신경유두 단면, 안저, 시야의 모식도</title>
+      <defs>
+        <clipPath id="clipA"><rect x="0" y="0" width="438" height="560"/></clipPath>
+        <clipPath id="clipO"><rect x="450" y="8" width="324" height="306" rx="12"/></clipPath>
+        <clipPath id="clipF"><circle cx="530" cy="432" r="64"/></clipPath>
+        <clipPath id="clipV"><circle cx="690" cy="432" r="64"/></clipPath>
+        <pattern id="tmPat" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+          <rect class="tm-bg" width="5" height="5"/><path class="tm-ln" d="M0,0 L0,5"/>
+        </pattern>
+      </defs>
+
+      <!-- ===== anterior segment ===== -->
+      <g clip-path="url(#clipA)">
+        <circle class="vit" cx="528" cy="280" r="376"/>
+        <path id="pcT" class="acfill"/><path id="pcB" class="acfill"/>
+        <path id="acFill" class="acfill hit" data-key="angle"/>
+
+        <g id="cbT" class="hit" data-key="cb"><path class="cbody" id="cbTb"/><path class="cmus" id="cbTm"/></g>
+        <g id="cbB" class="hit" data-key="cb"><path class="cbody" id="cbBb"/><path class="cmus" id="cbBm"/></g>
+        <path id="effT" class="effu"/><path id="effB" class="effu"/>
+        <path id="zonT" class="zon"/><path id="zonB" class="zon"/>
+        <ellipse id="lens" class="lens hit" data-key="lens" cx="282" cy="280" rx="62" ry="148"/>
+        <path id="irisT" class="iris hit" data-key="iris"/><path id="irisB" class="iris hit" data-key="iris"/>
+        <path id="dilT" class="dil"/><path id="dilB" class="dil"/>
+        <ellipse id="sphT" class="sph" rx="3" ry="6"/><ellipse id="sphB" class="sph" rx="3" ry="6"/>
+        <circle id="lpiT" class="lpi" r="5" hidden/><circle id="lpiB" class="lpi" r="5" hidden/>
+        <path id="scT" class="sclera" d="M182,80 A400,400 0 0 1 242,0 L277,0 A376,376 0 0 0 200,96 Z"/>
+        <path id="scB" class="sclera" d="M182,480 A400,400 0 0 0 242,560 L277,560 A376,376 0 0 1 200,464 Z"/>
+        <path id="flushT" class="flush" d="M182,80 A400,400 0 0 1 231,12"/>
+        <path id="flushB" class="flush" d="M182,480 A400,400 0 0 0 231,548"/>
+        <g class="hit" data-key="tm">
+          <polygon class="tm" points="200,96 210,78 216,81.6 206,99.6"/>
+          <polygon class="tm" points="200,464 210,482 216,478.4 206,460.4"/>
+          <polygon id="tmcT" class="tmc" points="200,96 210,78 216,81.6 206,99.6"/>
+          <polygon id="tmcB" class="tmc" points="200,464 210,482 216,478.4 206,460.4"/>
+          <polygon class="spur" points="209,79 219,77 214,71"/>
+          <polygon class="spur" points="209,481 219,483 214,489"/>
+          <ellipse class="schlemm" cx="196.4" cy="81.9" rx="7.5" ry="3.6" transform="rotate(-59 196.4 81.9)"/>
+          <ellipse class="schlemm" cx="196.4" cy="478.1" rx="7.5" ry="3.6" transform="rotate(59 196.4 478.1)"/>
+          <line class="coll" x1="192" y1="78" x2="184" y2="73"/>
+          <line class="coll" x1="192" y1="482" x2="184" y2="487"/>
+          <circle class="vein" cx="180" cy="70" r="5.5"/>
+          <circle class="vein" cx="180" cy="490" r="5.5"/>
+        </g>
+        <path id="pasT" class="pas hit" data-key="pas" opacity="0"/><path id="pasB" class="pas hit" data-key="pas" opacity="0"/>
+        <path id="rtCvT" class="route cv" d="M212,103 L207,90 L196,82 L186,75 L180,70"/>
+        <path id="rtCvB" class="route cv" d="M212,457 L207,470 L196,478 L186,485 L180,490"/>
+        <path id="rtUsT" class="route us" d="M218,97 L229,80 L241,58 L256,34 L268,14 L277,-10"/>
+        <path id="rtUsB" class="route us" d="M218,463 L229,480 L241,502 L256,526 L268,546 L277,570"/>
+        <path id="cornea" class="cornea hit" data-key="cornea" d="M182,80 A239,239 0 0 0 182,480 L200,464 A211,211 0 0 1 200,96 Z"/>
+        <path id="haze" class="haze" d="M182,80 A239,239 0 0 0 182,480 L200,464 A211,211 0 0 1 200,96 Z"/>
+        <g id="parts"></g>
+        <circle id="trRing" class="trring" r="7" hidden/>
+
+        <!-- labels -->
+        <text class="t-l hit" data-key="cornea" x="22" y="244">각막</text>
+        <text class="t-in hit" data-key="angle" x="128" y="285">전방</text>
+        <text id="lensLbl" class="t-in hit" data-key="lens" x="282" y="285" text-anchor="middle">수정체</text>
+        <text class="t-in" x="392" y="285" text-anchor="middle">유리체</text>
+        <g class="hit" data-key="tm">
+          <text class="t-s" x="166" y="56" text-anchor="end">상공막정맥</text><line class="leader" x1="168" y1="59" x2="176" y2="66"/>
+          <text class="t-s" x="160" y="104" text-anchor="end">슐렘관</text><line class="leader" x1="162" y1="100" x2="190" y2="86"/>
+        </g>
+        <text id="closedLbl" class="t-warn" x="140" y="130" text-anchor="end" opacity="0">각 닫힘</text>
+        <g class="hit" data-key="pas" id="pasLblG" opacity="0"><text class="t-pas" x="140" y="130" text-anchor="end">유착 (PAS)</text><line class="leader" x1="142" y1="127" x2="204" y2="97"/></g>
+        <g class="hit" data-key="iris"><text class="t-l" x="134" y="450" text-anchor="end">홍채</text><line id="irisLd" class="leader" x1="137" y1="446" x2="218" y2="418"/></g>
+        <text id="effLbl" class="t-warn" x="318" y="156" opacity="0">모양체 삼출</text>
+        <g class="hit" data-key="cb"><text class="t-cap" x="318" y="82">모양체 돌기 · 방수 생성</text><line class="leader" x1="318" y1="104" x2="292" y2="104"/></g>
+        <g class="hit" data-key="uveo"><text class="t-cap" x="318" y="16">모양체근 · 포도막공막 경로</text><line class="leader" x1="318" y1="40" x2="252" y2="48"/></g>
+        <g class="hit" data-key="tm"><text class="t-cap" x="22" y="18">섬유주 경로</text><line class="leader" x1="102" y1="46" x2="203" y2="88"/></g>
+        <g class="hit" data-key="iris"><text class="t-cap" x="22" y="486">홍채 근육 · 동공 크기</text></g>
+        <line id="ldSph" class="leader"/><line id="ldDil" class="leader"/>
+        <g id="badges"></g>
+      </g>
+      <path class="brk" d="M438,0 L438,40 l-5,8 l10,8 l-5,8 L438,560"/>
+
+      <!-- ===== optic nerve head ===== -->
+      <g id="onhG" class="hit" data-key="onh">
+        <rect class="inset" x="450" y="8" width="324" height="306" rx="12"/>
+        <g clip-path="url(#clipO)">
+          <rect class="vit" x="450" y="8" width="110" height="306"/>
+          <rect class="retina" x="560" y="0" width="14" height="134"/><rect class="retina" x="560" y="206" width="14" height="120"/>
+          <rect class="choroid" x="574" y="0" width="8" height="134"/><rect class="choroid" x="574" y="206" width="8" height="120"/>
+          <rect class="scl2" x="582" y="0" width="24" height="132"/><rect class="scl2" x="582" y="208" width="24" height="120"/>
+          <rect class="rim" x="560" y="134" width="46" height="72"/>
+          <rect id="rnflT" class="rnfl" x="554" y="0" width="6" height="134"/><rect id="rnflB" class="rnfl" x="554" y="206" width="6" height="120"/>
+          <path id="cup" class="cupc"/>
+          <rect class="nerve" x="606" y="134" width="170" height="72"/>
+          <path class="sheath" d="M606,128 L776,128 M606,212 L776,212"/>
+          <g id="fibers"></g>
+          <path id="lam" class="lam"/>
+          <g id="adots"></g>
+          <g id="parrs"></g>
+        </g>
+        <text class="t-l" x="466" y="32">시신경유두 단면</text>
+        <text class="t-s" x="466" y="48">눈 뒤쪽 · 확대</text>
+        <text id="parrT" class="t-m" x="468" y="124">안압 16</text>
+        <text class="t-s" x="616" y="56">망막신경섬유층</text><line class="leader" x1="614" y1="59" x2="560" y2="80"/>
+        <text class="t-s" x="636" y="112">사상판</text><line class="leader" x1="634" y1="114" x2="602" y2="146"/>
+        <text id="lamNote" class="t-warn" x="636" y="98" opacity="0">약한 시신경</text>
+        <text class="t-s" x="640" y="232">시신경 → 뇌</text>
+        <text class="t-s" x="468" y="252">함몰 (cup)</text><line id="cupLd" class="leader" x1="518" y1="248" x2="566" y2="180"/>
+        <text class="t-s" x="616" y="288">노란 점 = 축삭수송</text>
+      </g>
+
+      <!-- ===== fundus ===== -->
+      <g class="hit" data-key="onh">
+        <circle class="fun" cx="530" cy="432" r="64"/>
+        <g clip-path="url(#clipF)">
+          <ellipse class="disc" cx="530" cy="432" rx="30" ry="34"/>
+          <ellipse id="fcup" class="cup" cx="530" cy="432" rx="9" ry="10"/>
+          <path class="fves" stroke-width="2.8" d="M530,424 C530,404 524,390 506,382 C494,377 480,378 466,384 M530,440 C530,460 524,474 506,482 C494,487 480,486 466,480"/>
+          <path class="fves" stroke-width="1.8" opacity=".8" d="M532,424 C536,406 546,394 566,386 C578,382 588,384 596,388 M532,440 C536,458 546,470 566,478 C578,482 588,480 596,476"/>
+          <path class="fves" stroke-width="1.3" opacity=".7" d="M528,426 C522,418 510,414 492,416 M528,438 C522,446 510,450 492,448 M534,430 C546,428 560,424 592,420 M534,434 C546,436 560,440 592,444"/>
+        </g>
+        <text class="t-l" x="530" y="520" text-anchor="middle">안저 · 시신경유두</text>
+        <text id="cdT" class="t-m" x="530" y="538" text-anchor="middle">C/D 0.30</text>
+      </g>
+
+      <!-- ===== visual field ===== -->
+      <g class="hit" data-key="vf">
+        <circle class="vfbg" cx="690" cy="432" r="64"/>
+        <g clip-path="url(#clipV)">
+          <path class="vfax" d="M626,432 L754,432 M690,368 L690,496"/>
+          <ellipse class="vfd" cx="716" cy="435" rx="5" ry="7"/>
+          <path id="vfNasal" class="vfd" opacity="0" d="M626,431 L650,431 L646,416 L630,408 Z"/>
+          <path id="vfSup" class="vfs" opacity="0" stroke-width="13" d="M712,424 A30,30 0 1 0 662,429"/>
+          <path id="vfInf" class="vfs" opacity="0" stroke-width="13" d="M712,442 A30,30 0 1 1 662,435"/>
+          <circle id="vfPer" class="vfs" opacity="0" stroke-width="30" cx="690" cy="432" r="62"/>
+          <circle id="vfCen" class="vfd" opacity="0" cx="690" cy="432" r="18"/>
+          <circle cx="690" cy="432" r="2" fill="var(--danger)"/>
+        </g>
+        <text class="t-l" x="690" y="520" text-anchor="middle">시야 · 오른눈</text>
+        <text id="vfT" class="t-m" x="690" y="538" text-anchor="middle">정상</text>
+      </g>
+    </svg>
+    </div>
+
+    <div class="ctrl">
+      <button type="button" class="btn primary" id="bPlay">일시정지</button>
+      <button type="button" class="btn" id="bReset">처음부터</button>
+      <span class="tnote" id="tnote">시신경 시계 1초 ≈ 3개월</span>
+    </div>
+    <div class="legend">
+      <span style="--c:var(--aq)"><i class="dot"></i>방수</span>
+      <span class="conv"><i class="dash"></i>섬유주 경로</span>
+      <span class="uveo"><i class="dash"></i>포도막공막 경로</span>
+      <span class="adr"><i></i>아드레날린성 (β · α)</span>
+      <span class="chol"><i></i>콜린성 (M3)</span>
+      <span class="drugc"><i></i>치료 약</span>
+      <span class="dang"><i></i>악화 요인</span>
+    </div>
+
+    <div class="drugs">
+      <h3 class="sh">녹내장 약 <span id="rxHint">눌러서 켜고 끄세요. 여러 개를 함께 켤 수 있습니다.</span></h3>
+      <div class="dgrid" id="dgRx"></div>
+      <div class="pgarow" id="pgaRow" hidden>
+        <span>PGA 점안 시각</span>
+        <div class="seg" role="group" aria-label="PGA 점안 시각">
+          <button type="button" data-pga="pm" aria-pressed="true">저녁 9시</button>
+          <button type="button" data-pga="am" aria-pressed="false">아침 9시</button>
+        </div>
+        <span>오른쪽 24시간 곡선이 바뀝니다</span>
+      </div>
+      <h3 class="sh" style="margin-top:6px">함께 먹는 다른 약 · 상황 <span>녹내장 종류에 따라 위험이 전혀 다릅니다</span></h3>
+      <div class="dgrid" id="dgRisk"></div>
+    </div>
+
+    <div class="info" id="info" aria-live="polite"></div>
+  </div>
+
+  <aside class="panel" aria-label="실시간 상태">
+    <section>
+      <div class="ph"><span class="pill" id="phPill">정상 안압</span><span id="phSub">방수 생성과 배출이 균형</span></div>
+      <div class="alert" id="alert" hidden></div>
+      <div class="iopn"><span class="lbl">안압<small>낮 · 앉은 자세</small></span><b id="iopV">15.8</b><span class="u">mmHg</span></div>
+      <div class="gtrack"><span class="band"></span><i id="iopFill"></i><em id="iopTgt" hidden title="목표 안압"></em></div>
+      <div class="gticks"><span style="left:0">0</span><span style="left:16.67%">10</span><span style="left:35%">21</span><span style="left:50%">30</span><span style="left:66.67%">40</span><span style="left:83.33%">50</span><span style="left:100%">60</span></div>
+      <div class="gnote" id="iopNote">초록 띠 = 흔히 쓰는 정상 범위 10–21 mmHg (이것만으로 녹내장 여부를 정하지 않음)</div>
+      <div class="eq">
+        <span class="f">IOP = (F − U) ÷ C + Pv</span>
+        <span class="n" id="eqN"></span>
+        <span class="k">F 방수 생성 · U 포도막공막 배출 · C 섬유주 배출 용이도 · Pv 상공막정맥압</span>
+      </div>
+      <div class="nbars">
+        <div class="nb adr"><span class="nm">방수 생성 F</span><span class="bar"><i id="bF"></i></span><span class="v" id="vF">—</span></div>
+        <div class="nb conv"><span class="nm">섬유주 배출</span><span class="bar"><i id="bT"></i></span><span class="v" id="vT">—</span></div>
+        <div class="nb uveo"><span class="nm">포도막공막 U</span><span class="bar"><i id="bU"></i></span><span class="v" id="vU">—</span></div>
+      </div>
+      <dl id="stats"></dl>
+      <div class="sxrow" id="sxChips"></div>
+    </section>
+
+    <section>
+      <h3 class="sh">시신경 시계 <small id="clkSub">이미 잃은 축삭은 돌아오지 않습니다</small></h3>
+      <div class="clock"><b id="clkT">0개월</b><span id="clkR">축삭 100% 남음</span></div>
+      <p class="rate" id="rateT">—</p>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn sm" id="bClock">시계 되돌리기</button></div>
+    </section>
+
+    <section>
+      <h3 class="sh">24시간 안압 곡선 <small>개념 모델 · 저녁 6시부터</small></h3>
+      <canvas id="chart" aria-label="하루 동안의 안압 변화 그래프"></canvas>
+      <div class="cleg"><span><i style="background:var(--ink-3)"></i>녹내장 약 없이</span><span><i style="background:var(--conv)"></i>지금 켠 약으로</span><span><i style="background:var(--drug-soft);height:10px;vertical-align:-1px"></i>PGA 최대 효과 (점안 8–12시간 뒤)</span></div>
+      <p class="cstat" id="cStat"></p>
+    </section>
+
+    <section id="explain"></section>
+
+    <section id="offSec" hidden>
+      <h3 class="sh">부작용이 생기는 자리 <small>켠 약 · 주의 약 기준</small></h3>
+      <div id="off"></div>
+    </section>
+  </aside>
+</div>
+
+<section class="ref" id="targets">
+  <div class="ref-h">
+    <p class="eyebrow">Target map</p>
+    <h2>표적 한눈에</h2>
+    <p class="sub">안압은 만드는 양(F)과 빠지는 길(C, U)의 균형입니다. 녹내장 약은 모두 이 둘 중 하나를 건드리고, 동공 크기를 바꾸는 약은 좁은 전방각에서 출구 자체를 막습니다.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>표적</th><th>어디에</th><th>신호</th><th>하는 일</th><th>안압 쪽 효과</th><th>여기를 겨냥하는 약</th></tr></thead>
+    <tbody>
+      <tr><td><span class="rtag adr">β</span></td><td>모양체 상피</td><td>Gs → cAMP ↑</td><td>방수 분비 촉진</td><td>생성 ↑</td><td>티몰롤, 베톱틱(betaxolol), 미케란(carteolol) — 차단</td></tr>
+      <tr><td><span class="rtag adr">α2</span></td><td>모양체 상피</td><td>Gi → cAMP ↓</td><td>방수 생성 억제, 포도막공막 배출 일부 ↑</td><td>생성 ↓</td><td>알파간 피(brimonidine), 아프라클로니딘 — 작용제</td></tr>
+      <tr><td><span class="rtag enz">CA</span></td><td>모양체 상피 (경구제는 신장도)</td><td>CO₂ + H₂O ⇄ H⁺ + HCO₃⁻</td><td>HCO₃⁻ 분비 → 물 이동</td><td>생성 ↑</td><td>트루솝트(dorzolamide), 아좁트(brinzolamide), 다이아목스(acetazolamide) — 억제</td></tr>
+      <tr><td><span class="rtag uveo">FP · EP2</span></td><td>모양체근, 섬유주</td><td>Gq → MMP ↑</td><td>세포외기질 재구성, 근육다발 사이 틈 ↑</td><td>포도막공막 배출 ↑</td><td>잘라탄(latanoprost) 등 PGA<span class="eve" title="저녁에 넣습니다">저녁</span>, 오미데네팍(EP2)</td></tr>
+      <tr><td><span class="rtag chol">M3 · 모양체근</span></td><td>모양체근</td><td>Gq → Ca²⁺ ↑</td><td>공막돌기·섬유주 견인</td><td>섬유주 배출 ↑ (포도막공막 ↓)</td><td>필로카르핀 — 작용제</td></tr>
+      <tr><td><span class="rtag conv">ROCK</span></td><td>섬유주 · 슐렘관 세포</td><td>액틴-미오신 수축</td><td>세포 강직 → 저항 ↑</td><td>섬유주 배출 ↓</td><td>네타르수딜<span class="eve" title="저녁에 넣습니다">저녁</span> — 억제</td></tr>
+      <tr><td><span class="rtag conv">NO → cGMP</span></td><td>섬유주 · 슐렘관</td><td>sGC → cGMP ↑</td><td>세포 이완</td><td>섬유주 배출 ↑</td><td>latanoprostene bunod (FP + NO 공여)</td></tr>
+      <tr><td><span class="rtag dang">GR</span></td><td>섬유주</td><td>핵수용체 → 전사 변화</td><td>세포외기질 축적, 청소 기능 ↓</td><td>섬유주 배출 ↓</td><td>스테로이드 — 원인 약</td></tr>
+      <tr><td><span class="rtag chol">M3 · 괄약근</span></td><td>홍채 괄약근</td><td>Gq → 수축</td><td>축동</td><td>좁은 각에서 동공차단을 풂</td><td>필로카르핀 ↑ / 항콜린제(감기약·멀미약·산동제) ↓</td></tr>
+      <tr><td><span class="rtag adr">α1 · 산대근</span></td><td>홍채 산대근</td><td>Gq → 수축</td><td>산동</td><td>좁은 각에서 동공차단 ↑</td><td>페닐에프린 점안, pseudoephedrine 경구 — 원인 약</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="ref" id="atlas">
+  <div class="ref-h">
+    <p class="eyebrow">Drug atlas</p>
+    <h2>녹내장 약은 어디에 붙어서 듣나</h2>
+    <p class="sub">각 약의 표적, 단독요법으로 기대하는 대략적인 안압 하강, 부작용이 생기는 이유, 쓰기 전에 확인할 것을 정리했습니다. 하강률은 기저 안압·제형·시간대에 따라 달라지는 대략의 범위입니다.</p>
+  </div>
+  <div id="atlasBody"></div>
+</section>
+
+<section class="ref" id="risk">
+  <div class="ref-h">
+    <p class="eyebrow">Other medicines</p>
+    <h2>녹내장 환자가 조심할 다른 약</h2>
+    <p class="sub">“녹내장 환자 주의”라는 말 하나로 묶이지만, 실제로 위험한 환자는 약의 기전에 따라 다릅니다. 동공을 키우는 약은 <b>전방각이 좁은 사람</b>에게, 스테로이드는 <b>개방각녹내장 환자</b>에게, 토피라메이트는 <b>각과 상관없이</b> 문제를 일으킵니다.</p>
+  </div>
+  <div class="callouts">
+    <div class="co warn">
+      <h3>급성 폐쇄각 발작 신호</h3>
+      <p>갑자기 한쪽 눈이 몹시 아프고 빨개짐, 시력 저하, 불빛 주위 무지개 달무리, 두통, 구역·구토. 체한 것으로 오인하기 쉽습니다. 몇 시간~며칠 안에 시신경을 잃을 수 있어 <b>즉시 안과 응급진료</b>가 필요합니다.</p>
+    </div>
+    <div class="co">
+      <h3>‘녹내장 환자 주의’ 문구 읽는 법</h3>
+      <p>감기약·멀미약 설명서의 녹내장 경고는 주로 좁은 전방각(폐쇄각 위험) 환자의 급성 발작을 겨냥합니다. 개방각녹내장 환자 모두에게 일률적인 절대금기로 설명하는 것은 부정확합니다. 다만 환자가 자기 녹내장 종류를 모르는 경우가 많으므로 설명서의 경고는 그대로 안내하고 아래를 확인합니다.</p>
+      <ol><li>안과에서 어떤 녹내장(또는 ‘각이 좁다’)이라고 들었는지</li><li>레이저 홍채절개술을 받았는지</li><li>지금 넣는 안약이 무엇인지 (필로카르핀이면 폐쇄각 관리 중일 수 있음)</li></ol>
+    </div>
+  </div>
+  <div class="tbl"><table class="risktbl" id="riskTbl">
+    <thead><tr><th>약 · 성분 예</th><th>눈에서 하는 일</th><th>좁은 전방각 · 폐쇄각</th><th>개방각 · 정상안압</th><th>약국에서</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p class="after">시뮬레이터의 ‘폐쇄각녹내장’ 탭에서 종합감기약을 켜 보세요(‘급성 발작 보기’ 버튼도 같은 장면입니다). 동공이 중간 크기로 커지면서 홍채가 부풀고 각이 닫혀 안압이 치솟습니다. 같은 약을 ‘개방각녹내장’ 탭에서 켜면 동공만 커지고 안압은 그대로입니다. 과민성방광약의 항콜린 작용이 방광에서 하는 일은 <a href="https://sihuny227-rgb.github.io/lut-pharmacology/" target="_blank" rel="noopener">방광 수용체 시뮬레이터</a>에서 볼 수 있습니다.</p>
+</section>
+
+<section class="ref" id="counsel">
+  <div class="ref-h">
+    <p class="eyebrow">Counselling</p>
+    <h2>점안 교육과 저녁에 넣는 이유</h2>
+  </div>
+  <div class="twocol">
+    <div class="box">
+      <h3>녹내장 안약 넣는 법</h3>
+      <ol class="edu">
+        <li><b>처방된 한 방울만</b><p>용기 끝이 손·눈·속눈썹에 닿지 않게 합니다. 여러 방울 넣어도 눈에 머무는 양은 한 방울 정도입니다.</p></li>
+        <li><b>눈을 감고 눈물점을 1–2분 누르기</b><p>눈 안쪽 구석을 가볍게 누르면 약이 코 점막으로 넘어가 전신으로 흡수되는 양이 줄어듭니다. 티몰롤처럼 전신 부작용이 있는 약에서 특히 중요합니다.</p></li>
+        <li><b>여러 안약은 5분 이상 간격</b><p>먼저 넣은 약이 씻겨 나가지 않게 합니다. 점안겔·연고는 제품별 지침을 따릅니다.</p></li>
+        <li><b>증상이 없어도 끊지 않기</b><p>개방각녹내장은 진행해도 아프지 않습니다. 안압·시신경·시야를 정기적으로 확인합니다.</p></li>
+        <li><b>갑작스러운 변화는 응급</b><p>점안 후 흐림·충혈·피로는 약 때문일 수 있지만, 급격한 시력 변화나 심한 통증은 바로 진료를 받습니다.</p></li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>프로스타글란딘 유사체를 저녁에 넣는 이유</h3>
+      <p>라타노프로스트 기준 안압 하강 효과의 시간표입니다. 혈중 농도가 아니라 <b>안압이 내려가는 효과</b>의 시간입니다.</p>
+      <div class="tl" aria-label="저녁 9시 점안 후 효과 시간표">
+        <div class="tlbar"><span class="tl0">점안</span><span class="tl1">효과 시작</span><span class="tl2">최대</span><span class="tl3">24시간 유지</span></div>
+        <div class="tlax"><span>21시</span><span>0시</span><span>5–9시</span><span><span>다음 날</span><span>21시</span></span></div>
+      </div>
+      <ul class="why">
+        <li><b>최대 효과가 다음 날 이른 아침에 걸립니다</b>점안 3–4시간 뒤 시작, 8–12시간 뒤 최대, 24시간 지속. 저녁 9시에 넣으면 새벽 5–9시에 가장 강합니다.</li>
+        <li><b>밤·이른 아침 안압이 높은 환자가 있습니다</b>누우면 앉았을 때보다 안압이 오를 수 있습니다. 모든 환자의 최고점이 아침인 것은 아닙니다.</li>
+        <li><b>배출을 늘리는 약이라 밤에도 듣습니다</b>β차단제는 원래 밤에 줄어드는 방수 생성을 더 줄일 여지가 작아 야간 효과가 작습니다.</li>
+        <li><b>비교 연구가 저녁 쪽에 유리한 경향</b>아침과 저녁 투여를 비교한 일부 임상시험이 24시간 조절에서 저녁 투여의 이점을 보고했습니다.</li>
+      </ul>
+      <p class="muted">아침에 넣어도 효과는 있습니다. 티몰롤이 든 복합제 등은 제품 허가사항을 우선합니다. 하루 1회를 넘기면 효과가 오히려 줄 수 있으니 빼먹었다고 두 번 넣지 말고, 매일 같은 시각에 넣도록 안내합니다.</p>
+    </div>
+  </div>
+  <div class="caut" style="margin-top:16px">
+    <div class="ci"><span class="rtag dang">녹내장 + 백내장</span><h4>스테로이드</h4><p>섬유주에서는 배출 저항을 올려 안압을, 수정체에서는 후낭하백내장을 만듭니다. 장기간 점안할 때는 안압과 수정체를 함께 봅니다.</p></div>
+    <div class="ci"><span class="rtag enz">수정체</span><h4>두꺼워지는 수정체</h4><p>나이 들수록 수정체가 두꺼워져 홍채를 앞으로 밀고 각을 좁힙니다. 백내장 수술로 얇은 인공수정체로 바꾸면 각이 넓어지는 경우가 많습니다.</p></div>
+    <div class="ci"><span class="rtag conv">수술 직후</span><h4>일시적 안압 상승</h4><p>백내장 수술 뒤 남은 점탄물질이 섬유주를 막거나 수술 후 스테로이드에 반응해 안압이 오를 수 있습니다.</p></div>
+  </div>
+</section>
+
+<footer>교육용 모식도입니다. 안압·방수량·축삭 손실 속도·24시간 곡선은 개념을 보여 주기 위한 단순 모델 값이며 실제 환자 평가나 처방을 대신하지 않습니다. 성분별 용법·금기·국내 허가사항은 개별 제품 설명서(의약품안전나라)와 처방을 확인하세요. 바탕 자료: 「녹내장·백내장 병태생리 및 약물치료 완전정리」(2026-11-12), AAO POAG PPP, NICE NG81.</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const NS='http://www.w3.org/2000/svg', H=560, Y0=280;
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const appr=(c,t,r,dt)=>c+(t-c)*(1-Math.exp(-r*dt));
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+const rand=(a,b)=>a+Math.random()*(b-a);
+const f1=x=>(Math.round(x*10)/10).toFixed(1);
+const f2=x=>x.toFixed(2);
+function mk(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+const EVE='<span class="eve" title="저녁에 넣습니다">저녁</span>';
+
+/* ================= content ================= */
+const MODES={
+  normal:{F:2.5,u:0.24,C:0.28,Pv:9,thr:24,R0:1,narrow:0,tgt:null},
+  poag:{F:2.5,u:0.24,C:0.12,Pv:9,thr:18,R0:0.84,narrow:0,tgt:0.7},
+  ntg:{F:2.5,u:0.24,C:0.27,Pv:9,thr:12,R0:0.84,narrow:0,tgt:0.7},
+  pacg:{F:2.5,u:0.24,C:0.25,Pv:9,thr:21,R0:1,narrow:1,tgt:null}
+};
+const RX={
+  pga:{name:'프로스타글란딘 유사체 (PGA)',chip:'프로스타글란딘 유사체',sub:'FP 자극 · 포도막공막 배출↑',exs:'잘라탄(latanoprost) 등',cls:'uveo',sel:'fp',
+    ex:'잘라탄(latanoprost), 트라바탄(travoprost), 타플로탄(tafluprost), 루미간(bimatoprost)',
+    mech:'FP 수용체 → Gq → MMP 등 세포외기질 재구성 → 모양체근 다발 사이 저항 감소 → 포도막공막 배출 증가. 일부는 섬유주 배출도 늘립니다.',
+    drop:'25–33%',when:'하루 1회 저녁'+EVE,
+    se:[['결막충혈','프로스타글란딘의 국소 혈관 확장'],['속눈썹이 길고 짙어짐','모낭 성장기(anagen) 촉진'],['홍채 색이 짙어짐','멜라닌세포의 멜라닌 합성 증가 · 영구적일 수 있음'],['눈꺼풀 피부 착색','피부 색소 형성 증가'],['눈이 꺼져 보임 (PAP)','안와 주위 지방세포 위축 · 중단 후 일부 회복'],['낭포황반부종','혈관 투과성·염증 · 수술한 눈, 염증성 눈에서 논의']],
+    caution:['포도막염, 헤르페스 각막염 병력, 황반부종 고위험(최근 눈 수술 등)은 개별 평가','하루 1회를 넘기면 효과가 오히려 줄 수 있음','한쪽 눈에만 넣으면 양쪽 홍채·속눈썹 차이가 생길 수 있음']},
+  beta:{name:'β차단제',sub:'β 차단 · 방수 생성↓',exs:'티몰롤(timolol) 등',cls:'adr',sel:'beta',
+    ex:'티몰롤(timolol), 베톱틱(betaxolol · 상대적 β1 선택), 미케란(carteolol)',
+    mech:'모양체 상피의 β 수용체 신호(Gs → AC → cAMP)를 막아 방수 분비를 줄입니다.',
+    drop:'20–25%',when:'하루 1–2회 · 밤에는 효과가 작음',
+    se:[['서맥 · 저혈압 · 방실전도장애','심장 β1 차단'],['기관지경련 · 천식 악화','기관지 β2 차단 (베탁솔롤도 무조건 안전하지 않음)'],['저혈당 경고증상 은폐','두근거림 같은 교감 반응 차단'],['피로 · 운동능력 저하','운동 시 심박수 증가 제한']],
+    caution:['천식·중증 COPD, 중증 서맥, 방실차단 확인','경구 β차단제·베라파밀·딜티아젬과 서맥 가중','점안액도 코 점막으로 흡수돼 간 초회통과 없이 전신으로 감 → 눈물점 압박']},
+  a2:{name:'α2 작용제',sub:'α2 자극 · 생성↓ + 배출↑',exs:'알파간 피(brimonidine)',cls:'adr',sel:'a2',
+    ex:'알파간 피(brimonidine), 아프라클로니딘(apraclonidine · 레이저 시술 전후)',
+    mech:'α2(Gi) → AC·cAMP 감소 → 방수 생성 억제. 브리모니딘은 포도막공막 배출 증가에도 일부 기여합니다.',
+    drop:'20–25%',when:'하루 2–3회 (제품별 확인)',
+    se:[['졸음 · 무기력 · 피로','전신흡수 → 중추 α2 → 노르에피네프린 신경 억제'],['어지러움 · 저혈압','교감신경 긴장 저하'],['입마름','침 분비의 자율신경 조절 변화'],['지연성 알레르기·여포성 결막염','장기 사용 후 면역 반응 (점안 직후 따가움과 구별)']],
+    caution:['2세 미만 금기 (심한 중추 억제·무호흡)','MAO 억제제 병용 금기','수면제·알코올 등 중추억제제와 졸음 가중, 운전 주의']},
+  caiT:{name:'탄산탈수효소 억제제 (점안)',chip:'CA 억제제 (점안)',sub:'CA 억제 · 방수 생성↓',exs:'트루솝트, 아좁트',cls:'enz',sel:'ca',
+    ex:'트루솝트(dorzolamide), 아좁트(brinzolamide)',
+    mech:'모양체 상피의 CA 억제 → HCO₃⁻ 형성·전해질 수송 감소 → 물 이동 감소 → 방수 생성 감소.',
+    drop:'15–20%',when:'하루 2–3회',
+    se:[['따가움','도르졸라미드 점안 직후'],['일시적 흐림','브린졸라미드는 현탁액 · 흔들어 사용'],['쓴맛','눈물길 → 코 → 입으로 넘어감'],['각막부종 악화','각막내피 기능이 나쁜 눈']],
+    caution:['설폰아미드 계열 약에 중증 반응 병력 확인','각막내피 기능 저하','신기능 저하']},
+  caiO:{name:'아세타졸아미드 (경구)',chip:'아세타졸아미드 (경구)',sub:'전신 CA 억제 · 생성↓',exs:'다이아목스',cls:'enz',sel:'ca',
+    ex:'다이아목스(acetazolamide), 메타졸아미드',
+    mech:'눈의 CA와 함께 신장 근위세뇨관의 CA도 막아 HCO₃⁻가 소변으로 빠집니다(소변 알칼리화, 혈장 HCO₃⁻ 감소).',
+    drop:'약 20–30% · 빠름',when:'급성 발작·수술 전후 단기 사용이 많음',
+    se:[['대사성 산증','HCO₃⁻ 소실'],['저칼륨혈증','원위 네프론의 Na⁺ 전달·K⁺ 배설 증가'],['손발저림 · 피로 · 식욕부진','산염기·전해질 변화'],['이뇨 · 다뇨','NaHCO₃ 배설 증가'],['신결석','소변 알칼리화·구연산 배설 감소 → 칼슘인산염 결석'],['미각이상, 드문 중증 피부·혈액 반응','특이 반응']],
+    caution:['설폰아미드 과민 반응, 중증 간·신장애, 저칼륨·저나트륨혈증 확인','고용량 아스피린 병용 시 독성 주의','신기능·전해질·산염기 상태 추적']},
+  pilo:{name:'필로카르핀',sub:'M3 자극 · 섬유주 배출↑ · 축동',exs:'필로카르핀 점안액',cls:'chol',sel:'m3cm',
+    ex:'필로카르핀 점안액',
+    mech:'M3(Gq → IP₃ → Ca²⁺) → 모양체근 수축 → 공막돌기·섬유주 견인 → 섬유주 배출 증가. 홍채 괄약근도 수축해 동공이 작아집니다.',
+    drop:'20–25%',when:'하루 여러 번 (지키기 어려움)',
+    se:[['밤에 어둡게 보임','축동 → 들어오는 빛 감소'],['눈썹 주위 두통 · 안구통','모양체근 지속 수축'],['근시화 · 흐림','조절 유발, 수정체 두께 변화'],['드문 망막열공 · 망막박리','유리체망막 견인'],['발한 · 침 · 복부경련 · 서맥','전신흡수 시 콜린성 반응']],
+    caution:['만성 개방각녹내장의 전형적인 1차 약은 아님','안압이 약 40 mmHg 이상이면 홍채 괄약근 허혈로 잘 듣지 않음','토피라메이트 같은 비동공차단 폐쇄각은 오히려 악화','고도근시·망막 질환, 포도막염 확인']},
+  rock:{name:'ROCK 억제제',sub:'섬유주 이완 · 배출↑',exs:'네타르수딜',cls:'conv',sel:'rock',
+    ex:'네타르수딜(netarsudil) · 국내 허가·도입 여부 확인',
+    mech:'ROCK 억제 → 액틴-미오신 수축·세포골격 긴장 감소 → 섬유주·슐렘관 저항 감소. 상공막정맥압 감소, 방수 생성 억제도 일부 보고되었습니다.',
+    drop:'10–20%',when:'하루 1회 저녁'+EVE,
+    se:[['결막충혈','혈관 이완'],['결막출혈','혈관 이완'],['각막 소용돌이 침착','약물 관련 지질성 침착'],['망상 각막상피부종','특히 각막내피 기능이 저하된 눈']],
+    caution:['각막내피 기능 저하','충혈이 흔하다는 점을 미리 설명']},
+  mannitol:{name:'만니톨 (정맥)',sub:'고삼투압 · 유리체 수분↓',exs:'병원 응급 주사',cls:'enz',sel:'lens',only:['pacg'],
+    ex:'만니톨 주사 (병원 응급)',
+    mech:'혈장 삼투압 상승 → 유리체 등 눈 속 조직의 물이 혈관 쪽으로 이동 → 안구 내용적·안압 감소. 수정체-홍채가 조금 뒤로 물러납니다.',
+    drop:'급성 하강',when:'급성 폐쇄각 발작에서 정맥 투여',
+    se:[['심부전 · 폐부종 악화','혈관 내 용적 변화'],['신기능 · 전해질 이상','삼투성 이뇨']],
+    caution:['심부전, 신기능 저하, 탈수 확인']},
+  lpi:{name:'레이저 홍채절개술 (LPI)',chip:'레이저 홍채절개술',sub:'시술 · 홍채에 우회 구멍',exs:'LPI',cls:'chol',sel:'iris',only:['pacg'],proc:true,
+    ex:'Laser peripheral iridotomy',
+    mech:'홍채 주변부에 작은 구멍을 내 후방의 방수가 동공을 거치지 않고 전방으로 가게 합니다. 후방-전방 압력차가 사라져 홍채가 평평해지고 각이 열립니다.',
+    drop:'동공차단 해소',when:'발작 후 안압·각막부종을 먼저 가라앉히고 시행, 반대 눈도 예방',
+    se:[['일시적 안압 상승 · 염증','시술 후 반응'],['눈부심 · 줄무늬 상','드묾']],
+    caution:['동공차단이 아닌 기전(고원홍채 등)은 LPI만으로 해결되지 않을 수 있음','토피라메이트 유발 폐쇄각에는 효과 없음']}
+};
+const RISK={
+  coldMed:{name:'종합감기약',sub:'α1 자극 + 항콜린 · 산동',exs:'pseudoephedrine + chlorpheniramine',a1:0.9,am:1.3,sel:'m3sph',
+    why:'코막힘 성분이 홍채 산대근(α1)을 수축시키고, 항히스타민 성분의 항콜린 작용이 괄약근(M3)을 풀어 동공이 커집니다.',
+    narrow:'동공이 중간 크기로 커지면 수정체-홍채 접촉이 강해져 방수가 후방에 갇히고(동공차단), 부푼 홍채가 섬유주를 덮습니다. 급성 폐쇄각 발작입니다.',
+    open:'각이 열려 있어 동공이 커져도 섬유주가 가려지지 않습니다. 안압은 거의 그대로입니다.'},
+  decong:{name:'코막힘약 (충혈제거제)',sub:'α1 자극 · 산동',exs:'pseudoephedrine, phenylephrine 경구',a1:0.9,sel:'a1dil',
+    why:'교감신경 흥분제가 홍채 산대근의 α1을 자극해 동공을 넓힙니다.',
+    narrow:'혼자서는 동공이 조금 커지는 정도라 문턱 아래에 머물 수 있습니다. 어두운 곳이나 항히스타민제와 겹치면 문턱을 넘습니다.',
+    open:'각이 열려 있어 안압 변화는 거의 없습니다. 고혈압·심장 질환 쪽 주의가 더 중요합니다.'},
+  antiH:{name:'1세대 항히스타민제',sub:'항콜린 · 산동',exs:'chlorpheniramine, diphenhydramine',am:1.3,sel:'m3sph',
+    why:'항무스카린 작용으로 홍채 괄약근이 풀려 동공이 커집니다. 수면유도제(diphenhydramine), 멀미약(dimenhydrinate)에도 들어 있습니다.',
+    narrow:'중간 산동 → 동공차단 → 발작 위험. 밤에 먹고 어두운 데서 자는 수면유도제는 조건이 겹칩니다.',
+    open:'안압 변화는 거의 없습니다.'},
+  scop:{name:'멀미 패치 · 진경제',sub:'강한 항콜린 · 산동',exs:'스코폴라민 패치, 부틸스코폴라민',am:2.0,sel:'m3sph',
+    why:'강한 무스카린 차단입니다. 패치를 만진 손으로 눈을 비비면 그쪽 동공만 크게 열립니다.',
+    narrow:'동공이 크게 열려 발작 위험이 큽니다.',
+    open:'안압 변화는 거의 없습니다. 한쪽 동공만 커져 놀라 응급실에 오는 경우가 있습니다.'},
+  antiChol:{name:'항콜린 작용 처방약',sub:'M 차단 · 산동',exs:'과민성방광약, 삼환계 항우울제 등',am:1.2,sel:'m3sph',
+    why:'방광의 M3를 막는 과민성방광약(oxybutynin, solifenacin), 삼환계 항우울제(amitriptyline), 파킨슨약(benztropine), 일부 항정신병약이 홍채 괄약근의 M3도 막습니다.',
+    narrow:'중간 산동 → 발작 위험. 허가사항에 ‘조절되지 않는 좁은각 녹내장’ 금기가 있는 약이 많습니다.',
+    open:'안압 변화는 거의 없습니다.'},
+  mydr:{name:'산동 점안제 (검사용)',sub:'M3 차단 + α1 자극',exs:'트로피카미드 + 페닐에프린',am:2.4,a1:1.4,sel:'m3sph',
+    why:'괄약근은 막고 산대근은 자극해 동공을 최대로 엽니다. 안저검사와 백내장 수술 전에 씁니다.',
+    narrow:'가장 강한 방아쇠입니다. 그래서 산동 전에 전방각을 평가합니다.',
+    open:'안압 변화는 거의 없습니다. 눈부심·근거리 흐림이 몇 시간 갑니다.'},
+  dark:{name:'어두운 곳 · 긴장',sub:'생리적 산동 · 약이 아님',exs:'영화관, 밤 운전, 불 끈 방',dk:1.5,sel:'a1dil',situation:true,
+    why:'어두우면 반사적으로 동공이 커집니다. 긴장·통증으로 교감신경이 흥분해도 커집니다.',
+    narrow:'약이 없어도 발작의 계기가 됩니다. 저녁·밤에 발작이 잦은 이유입니다.',
+    open:'영향 없습니다.'},
+  steroid:{name:'스테로이드',sub:'GR · 섬유주 저항↑ (수 주)',exs:'점안 > 눈 주위 > 흡입 · 경구',sel:'gr',
+    why:'섬유주 GR 활성화 → fibronectin·GAG 축적, myocilin 변화, 청소 기능 저하 → 배출 저항 증가. 대개 수 주에 걸쳐 오르고 끊으면 대부분 내려옵니다.',
+    narrow:'각과 관계없이 섬유주 자체가 막혀 안압이 오릅니다.',
+    open:'개방각녹내장 환자는 반응이 더 흔하고 큽니다. 장기 사용 시 안압 확인이 필요합니다.'},
+  topi:{name:'토피라메이트',sub:'모양체 삼출 · 수정체 전방 이동',exs:'편두통 예방 · 뇌전증 · 체중감량',sel:'cb',
+    why:'모양체·맥락막에 삼출이 생겨 모양체가 앞으로 돌고 수정체-홍채가 통째로 밀립니다(비동공차단). 근시화가 함께 옵니다.',
+    narrow:'원래 각이 좁든 넓든 생기고 보통 양쪽 눈에 옵니다.',
+    open:'개방각·정상 눈에서도 생깁니다. 대개 복용 시작 후 1개월 안에 옵니다.'}
+};
+const OFF={
+  pga:[['결막 혈관','충혈'],['속눈썹 모낭','길고 짙어짐'],['홍채 멜라닌세포','색이 짙어짐 (영구 가능)'],['안와 주위 지방','눈 꺼짐 (PAP)'],['황반','부종 (수술한 눈·염증성 눈)']],
+  beta:[['심장 β1','서맥 · 저혈압 · 방실차단'],['기관지 β2','천식 악화'],['교감 반응','저혈당 증상 은폐'],['운동','피로 · 운동능력 저하']],
+  a2:[['뇌 α2','졸음 · 피로'],['혈관','어지러움 · 저혈압'],['침샘','입마름'],['결막','지연성 알레르기성 결막염'],['영아','무호흡 → 2세 미만 금기']],
+  caiT:[['눈 표면','따가움 · 일시적 흐림'],['입','쓴맛'],['각막내피','부종 악화 (약한 눈)']],
+  caiO:[['신장 근위세뇨관','HCO₃⁻ 소실 → 대사성 산증'],['신장','저칼륨혈증 · 다뇨 · 결석'],['말초신경','손발저림 · 피로'],['과민반응','설폰아미드 교차 반응']],
+  pilo:[['동공','축동 → 밤에 어둡게'],['모양체근','눈썹 두통 · 근시화'],['망막','드물게 열공 · 박리'],['전신','발한 · 침 · 서맥']],
+  rock:[['결막','충혈 · 출혈'],['각막','소용돌이 침착 · 상피부종']],
+  mannitol:[['심장 · 폐','심부전 · 폐부종 악화'],['신장','신기능 · 전해질 이상']],
+  lpi:[['홍채','작은 구멍 (보통 시력엔 영향 없음)'],['시술 직후','일시적 안압 상승 · 염증']]
+};
+const INFO={
+  intro:{title:'그림 읽는 법',body:'수용체 배지(β, α2, CA, FP, M3, ROCK, GR, α1)나 구조 이름을 누르면 여기에 설명이 나옵니다. 아래 약을 켜면 약이 붙는 자리가 표시됩니다.',
+    list:[['k0','파란 점','방수. 모양체에서 만들어져 동공을 지나 전방각으로 빠져나갑니다'],['k1','파란 점선','섬유주 경로 (섬유주 → 슐렘관 → 상공막정맥)'],['k2','보라 점선','포도막공막 경로 (모양체근 사이 → 눈 밖)'],['k3','분홍 고리 · 빗금','약이 자극하는 자리 · 막는 자리'],['k4','빨간 표시','안압을 올리거나 각을 닫는 약의 작용']]},
+  beta:{tag:['adr','교감'],title:'β 수용체 · 모양체 상피',dl:[['위치','모양체 돌기의 비색소상피'],['신호','Gs → adenylyl cyclase ↑ → cAMP ↑'],['작용','방수 분비 촉진']],eff:'교감신경 긴장이 높은 낮 동안 방수 생성을 떠받칩니다. 막으면 방수 생성이 줄어 안압이 약 20–25% 내려갑니다.',drugs:['티몰롤 (비선택)','베톱틱(betaxolol) · 상대적 β1 선택','미케란(carteolol)'],note:'밤에는 원래 방수 생성이 줄어 있어 β차단제의 야간 효과가 작습니다. 점안해도 코 점막으로 흡수돼 심장(β1)과 기관지(β2)까지 막을 수 있습니다.'},
+  a2:{tag:['adr','교감'],title:'α2 수용체 · 모양체 상피',dl:[['위치','모양체 상피'],['신호','Gi → adenylyl cyclase ↓ → cAMP ↓'],['작용','방수 생성 억제 (+ 포도막공막 배출 일부 ↑)']],eff:'β와 같은 cAMP 스위치를 반대 방향으로 누릅니다. 생성은 줄이고 배출은 조금 늘립니다.',drugs:['알파간 피(brimonidine)','아프라클로니딘 · 시술 전후'],note:'전신으로 흡수되면 뇌의 α2도 자극해 졸음·피로가 옵니다. 영아는 무호흡까지 올 수 있어 2세 미만 금기입니다.'},
+  ca:{tag:['enz','효소'],title:'탄산탈수효소 (CA) · 모양체 상피',dl:[['반응','CO₂ + H₂O ⇄ H⁺ + HCO₃⁻'],['역할','HCO₃⁻ 분비 → Na⁺ 동반 → 삼투로 물 이동'],['결과','방수 생성']],eff:'방수는 단순 여과가 아니라 이온을 능동 분비해서 만듭니다. CA를 막으면 HCO₃⁻가 덜 만들어져 물이 덜 따라옵니다.',drugs:['트루솝트(dorzolamide) 점안','아좁트(brinzolamide) 점안','다이아목스(acetazolamide) 경구'],note:'경구제는 신장 근위세뇨관의 CA도 막아 HCO₃⁻가 소변으로 빠집니다. 대사성 산증, 저칼륨혈증, 손발저림, 결석이 여기서 나옵니다.'},
+  fp:{tag:['uveo','프로스타노이드'],title:'FP 수용체 · 모양체근',dl:[['위치','모양체근, 섬유주'],['신호','Gq → MMP ↑ → 세포외기질 재구성'],['작용','근육다발 사이 틈 ↑ → 포도막공막 배출 ↑']],eff:'근육 사이 콜라겐을 MMP가 정리하면서 방수가 빠져나가는 길이 넓어집니다. 단독 효과가 가장 커서 개방각녹내장의 1차 약입니다.',drugs:['잘라탄(latanoprost)'+EVE,'트라바탄(travoprost)'+EVE,'타플로탄(tafluprost)'+EVE,'루미간(bimatoprost)'+EVE],note:'효과가 3–4시간 뒤 시작해 8–12시간에 최대, 24시간 지속됩니다. 저녁에 넣으면 최대 효과가 다음 날 새벽·아침에 걸립니다. EP2 작용제 오미데네팍은 같은 길을 다른 수용체로 엽니다.'},
+  m3cm:{tag:['chol','부교감'],title:'M3 수용체 · 모양체근',dl:[['위치','모양체근'],['신호','Gq → IP₃ → Ca²⁺ ↑ → 수축'],['작용','공막돌기를 당겨 섬유주 그물을 벌림']],eff:'모양체근이 수축하면 공막돌기와 섬유주가 당겨져 섬유주 배출이 늘어납니다. 대신 근육다발이 조여 포도막공막 배출은 줄어듭니다.',drugs:['필로카르핀 · 작용제'],note:'같은 근육이 가까운 곳을 볼 때 초점을 맞춥니다. 필로카르핀이 근시화와 눈썹 주위 통증을 일으키는 이유입니다. 아트로핀·스코폴라민 같은 항콜린제는 반대로 이 근육을 풉니다.'},
+  rock:{tag:['conv','섬유주'],title:'ROCK · 섬유주와 슐렘관 세포',dl:[['하는 일','액틴-미오신 수축, 세포 강직'],['결과','섬유주 조직이 뻣뻣해지고 배출 저항 ↑'],['억제하면','세포가 이완 → 섬유주 배출 ↑']],eff:'개방각녹내장에서 막힌 자리인 섬유주 자체를 겨냥하는 약입니다. 상공막정맥압을 낮추는 효과도 일부 보고되었습니다.',drugs:['네타르수딜(netarsudil)'+EVE],note:'국내 허가·도입 여부는 제품별로 확인하세요. 결막충혈, 결막출혈, 각막 소용돌이 침착이 흔합니다.'},
+  gr:{tag:['dang','호르몬'],title:'글루코코르티코이드 수용체 (GR) · 섬유주',dl:[['자극','스테로이드 (점안 > 눈 주위 > 흡입·경구·피부)'],['변화','fibronectin·GAG 축적, myocilin 변화, 청소 기능 ↓'],['결과','섬유주 배출 저항 ↑ → 안압 ↑']],eff:'각은 열려 있는데 섬유주가 막히는 개방각형 고안압입니다. 대개 수 주에 걸쳐 오르고, 끊으면 대부분 내려옵니다.',drugs:[],note:'개방각녹내장 환자는 반응이 더 흔하고 큽니다. 같은 스테로이드가 수정체에는 후낭하백내장을 만듭니다.'},
+  m3sph:{tag:['chol','부교감'],title:'M3 수용체 · 홍채 괄약근',dl:[['위치','동공 가장자리를 둘러싼 원형근'],['신경','부교감 (동안신경) · 아세틸콜린'],['작용','수축 → 축동 (동공 작아짐)']],eff:'동공을 좁히는 근육입니다. 막히면 동공이 커집니다(산동).',drugs:['자극: 필로카르핀','차단: 트로피카미드 · 아트로핀','차단: 1세대 항히스타민제 · 스코폴라민 · 과민성방광약 · 삼환계 항우울제'],note:'좁은 전방각에서는 동공이 중간 크기(약 4–6 mm)일 때 수정체와 홍채가 넓게 맞닿아 동공차단이 가장 강해집니다. 감기약이 위험한 이유입니다.'},
+  a1dil:{tag:['adr','교감'],title:'α1 수용체 · 홍채 산대근',dl:[['위치','홍채 뒷면의 방사형 근육'],['신경','교감 · 노르에피네프린'],['작용','수축 → 산동 (동공 커짐)']],eff:'동공을 넓히는 근육입니다. 어두운 곳, 긴장, 교감신경 흥분제에서 동공이 커집니다.',drugs:['자극: 페닐에프린 점안 (산동 검사)','자극: pseudoephedrine · phenylephrine 경구 (코막힘약)'],note:'산동되면 홍채 주변부가 두꺼워지고 접히면서 좁은 각을 더 막습니다.'},
+  tm:{tag:['conv','배출'],title:'섬유주 → 슐렘관 (섬유주 경로)',dl:[['경로','섬유주 → 슐렘관 → 집합관 → 상공막정맥'],['성질','압력 의존적 (안압이 오를수록 더 빠짐)'],['병','개방각녹내장의 주된 저항 부위']],eff:'Goldmann 식의 C(배출 용이도)가 이 길의 성질입니다. 섬유주에 세포외기질이 쌓이면 C가 떨어지고, 같은 방수량에도 안압이 오릅니다.',drugs:['필로카르핀','ROCK 억제제','(일부) PGA','latanoprostene bunod · NO'],note:'안압은 상공막정맥압(Pv)보다 낮아질 수 없습니다. 섬유주가 아무리 좋아져도 바닥이 있는 이유입니다.'},
+  uveo:{tag:['uveo','배출'],title:'포도막공막 경로',dl:[['경로','전방각 → 모양체근 다발 사이 → 맥락막위 공간 → 공막 밖'],['성질','압력에 거의 무관'],['비율','나이·안압·조건마다 달라 고정 수치로 보지 않음']],eff:'PGA가 주로 넓히는 길입니다. 필로카르핀은 모양체근을 조여 이 길을 오히려 좁힙니다.',drugs:['PGA (FP)','EP2 작용제','브리모니딘 (일부)'],note:'이 시뮬레이터에서는 Goldmann 식의 U를 이 길로 빠지는 방수량으로 보여 줍니다.'},
+  cb:{tag:['enz','모양체'],title:'모양체',dl:[['구성','모양체근 + 모양체 돌기 (이중 상피)'],['하는 일','방수 생성, 초점 조절, 섬모체소대로 수정체 지지'],['방수','낮에 많고 밤에 줄어듦']],eff:'모양체 돌기의 비색소상피가 Na⁺·HCO₃⁻·Cl⁻를 능동 분비하고, 물이 삼투로 따라가 방수가 됩니다. β·α2·CA가 이 분비를 조절합니다.',drugs:['β차단제','α2 작용제','CA 억제제'],note:'토피라메이트는 모양체·맥락막에 삼출을 일으켜 모양체를 앞으로 돌리고 수정체-홍채를 통째로 밀어 각을 닫습니다. 그림의 노란 층이 삼출입니다.'},
+  iris:{tag:['chol','홍채'],title:'홍채와 동공',dl:[['괄약근','M3 · 부교감 → 축동'],['산대근','α1 · 교감 → 산동'],['동공','방수가 후방에서 전방으로 가는 통로']],eff:'홍채 가장자리는 수정체 앞면에 얹혀 있습니다. 이 틈이 막히면(동공차단) 방수가 후방에 갇혀 홍채가 앞으로 부풀어 오릅니다(iris bombé).',drugs:['필로카르핀 (축동)','레이저 홍채절개술 (우회 구멍)'],note:'레이저 홍채절개술(LPI)은 홍채 주변부에 작은 구멍을 내 후방과 전방의 압력차를 없앱니다. 이 시술을 받은 눈은 산동으로 인한 동공차단 위험이 크게 줄어듭니다.'},
+  pas:{tag:['adr','만성 폐쇄각'],title:'주변홍채앞유착 (PAS)',dl:[['무엇','홍채 주변부가 섬유주에 영구히 들러붙은 것'],['생기는 때','좁은 각이 오래·반복해서 닿을 때, 급성 발작이 길 때'],['결과','덮인 만큼 섬유주 배출 ↓ → 아프지 않은 만성 고안압']],eff:'만성 폐쇄각녹내장은 급성 발작처럼 아프지 않습니다. 개방각녹내장처럼 시신경이 서서히 상해 늦게 발견됩니다. 그림에서 홍채 뿌리가 섬유주에 붙은 진한 갈색 부분이 유착입니다.',drugs:['레이저 홍채절개술 (더 진행 막기)','PGA 등 안압약','수정체 제거 (각 넓히기)'],note:'레이저 홍채절개술은 동공차단을 풀 뿐 이미 들러붙은 곳은 열지 못합니다. 그래서 시술 뒤에도 안압약이 필요한 경우가 많습니다. 실제 유착은 360° 중 일부 구간에 생기며, 그림은 한 단면만 보여 줍니다.'},
+  angle:{tag:['conv','구조'],title:'전방과 전방각',dl:[['전방','각막 뒤 · 홍채 앞, 방수로 차 있음'],['전방각','각막과 홍채가 만나는 모서리, 섬유주가 있는 곳'],['좁은 각','얕은 전방 · 짧은 안축장 · 두꺼운 수정체 · 고원홍채']],eff:'방수의 출구가 전방각에 있습니다. 개방각녹내장은 각은 열려 있는데 섬유주가 막힌 것이고, 폐쇄각은 홍채가 출구 자체를 덮은 것입니다.',drugs:[],note:'감기약 설명서의 ‘녹내장 주의’는 주로 이 각이 좁은 사람(폐쇄각 위험)을 겨냥합니다.'},
+  lens:{tag:['enz','수정체'],title:'수정체',dl:[['위치','홍채 바로 뒤'],['나이','평생 자라 두꺼워짐 → 앞으로 나옴'],['연결','두꺼운 수정체 = 얕은 전방 = 좁은 각']],eff:'나이가 들수록 수정체가 두꺼워지며 홍채를 앞으로 밀어 전방각을 좁힙니다. 백내장 수술로 얇은 인공수정체로 바꾸면 각이 넓어지고 안압이 내려가는 경우가 많습니다.',drugs:['만니톨 (유리체 수분 ↓ → 수정체-홍채가 뒤로)'],note:'백내장 수술 직후에는 남은 점탄물질이나 수술 후 스테로이드 때문에 일시적으로 안압이 오를 수 있습니다.'},
+  cornea:{tag:['enz','각막'],title:'각막',dl:[['두께','중심 약 0.5 mm'],['영양','방수에서 산소·포도당을 받음'],['안압이 매우 높으면','내피 펌프가 못 이겨 부종 → 뿌옇게']],eff:'급성 폐쇄각 발작에서 각막이 붓고 뿌예지면 불빛 주위에 무지개 달무리가 보입니다.',drugs:[],note:'국소 CA 억제제와 ROCK 억제제는 각막내피가 약한 눈에서 각막부종을 악화시킬 수 있습니다.'},
+  onh:{tag:['ink','시신경'],title:'시신경유두 · 사상판',dl:[['구조','망막신경절세포 축삭이 모여 사상판 구멍을 지나 눈 밖으로'],['손상 연쇄','사상판 변형 → 축삭수송 장애 → 혈류·미토콘드리아 기능 저하, 교세포 활성화 → 신경절세포 소실'],['보이는 변화','망막신경섬유층이 얇아지고 함몰(cup)이 커짐']],eff:'현재 가장 확실하게 조절할 수 있는 위험인자는 안압입니다. 정상안압녹내장도 안압을 더 낮추면 진행이 줄어듭니다.',drugs:[],note:'그림의 노란 점은 축삭을 따라 이동하는 물질(축삭수송)입니다. 안압이 높으면 사상판에서 정체됩니다. 이미 잃은 축삭은 돌아오지 않습니다.'},
+  vf:{tag:['ink','시야'],title:'녹내장의 시야 결손',dl:[['초기','코쪽 계단, 맹점 주위 암점'],['중기','활 모양 암점'],['말기','터널 시야 → 중심까지']],eff:'중심시력은 끝까지 비교적 남아 있어 본인은 늦게 알아챕니다. 한 눈이 가려도 반대 눈이 빈 곳을 메웁니다.',drugs:[],note:'시신경유두 아래쪽 테두리가 먼저 얇아지면 위쪽 시야가 먼저 빠집니다. 그림은 오른눈 기준(맹점이 오른쪽)입니다.'}
+};
+const STEPS=[
+  ['만들기','모양체 돌기의 비색소상피가 Na⁺·HCO₃⁻·Cl⁻를 능동 분비하고 물이 삼투로 따라옵니다. <b class="c-adr">β</b>는 분비를 늘리고 <b class="c-adr">α2</b>는 줄이며, <b class="c-enz">CA</b>가 HCO₃⁻를 대 줍니다.'],
+  ['후방 → 동공','방수는 홍채 뒤·수정체 앞(후방)을 지나 동공을 통해 전방으로 나옵니다.'],
+  ['전방','각막 내피와 수정체에 영양을 주고 노폐물을 거둡니다.'],
+  ['섬유주 경로','전방각의 섬유주 → 슐렘관 → 집합관 → 상공막정맥. 안압이 오를수록 더 많이 빠지는 압력 의존 경로입니다.'],
+  ['포도막공막 경로','모양체근 다발 사이 → 맥락막위 공간 → 공막 밖. 압력과 거의 무관하며 <b class="c-uveo">PGA</b>가 넓히는 길입니다.']
+];
+const PROB={
+  poag:[
+    {key:'tm',tag:['conv','섬유주'],t:'각은 열려 있는데 배출구가 막혔습니다',d:'섬유주에 세포외기질이 쌓이고 세포골격·슐렘관 기능이 변해 C(배출 용이도)가 떨어집니다. 그림에서 방수 알갱이가 섬유주 앞에서 줄을 섭니다.'},
+    {key:'onh',tag:['ink','시신경'],t:'높아진 안압이 사상판을 밉니다',d:'사상판이 뒤로 휘며 축삭이 꺾이고 축삭수송이 막힙니다. 신경절세포가 사라지며 함몰(cup)이 커집니다.'},
+    {key:'vf',tag:['ink','시야'],t:'본인은 거의 모릅니다',d:'중심시력은 늦게까지 남고 반대 눈이 빈 곳을 메웁니다. 시야검사로 찾아야 하는 이유입니다.'}],
+  ntg:[
+    {key:'tm',tag:['conv','안압'],t:'안압은 정상 범위입니다',d:'섬유주 배출이 거의 정상이라 안압이 10–21 mmHg 안에 있습니다. 한국에서 비교적 흔한 형태입니다.'},
+    {key:'onh',tag:['ink','시신경'],t:'시신경이 그 안압을 못 견딥니다',d:'조직 감수성, 혈류 조절, 안압 변동 등이 관여할 수 있지만 한 가지 원인으로 단정하지 않습니다. 이 모델에서는 손상이 시작되는 안압을 낮게 잡았습니다.'},
+    {key:'fp',tag:['uveo','치료'],t:'그래도 치료는 안압을 더 낮추는 것',d:'정상 범위 안에서도 안압을 추가로 낮추면 진행 위험이 줄어듭니다. 목표는 기저 안압보다 약 20–30% 아래입니다.'}],
+  pacg:[
+    {key:'angle',tag:['adr','구조'],t:'눈 앞쪽이 좁습니다',d:'얕은 전방, 짧은 안축장, 나이 들며 두꺼워진 수정체 때문에 홍채와 섬유주 사이 틈이 좁습니다. 평소 안압은 정상일 수 있습니다.'},
+    {key:'iris',tag:['chol','동공차단'],t:'방수가 동공을 잘 못 지나갑니다',d:'수정체-동공 가장자리 접촉면에서 방수 흐름이 막히면 후방 압력이 올라 홍채가 앞으로 부풉니다(iris bombé). 부푼 홍채가 섬유주를 덮으면 발작입니다.'},
+    {key:'m3sph',tag:['dang','방아쇠'],t:'동공이 중간 크기로 커질 때 가장 위험합니다',d:'어두운 곳, 항콜린 작용이 있는 약(감기약·멀미약 등), 교감신경 흥분제가 방아쇠가 됩니다. 아래 주의 약을 켜 보세요.'}]
+};
+const RISKROWS=[
+  {id:'coldMed',mode:'pacg',name:'종합감기약 · 코감기약',ex:'pseudoephedrine, phenylephrine + chlorpheniramine 등',how:'α1(산대근) 자극 + M3(괄약근) 차단 → 산동',n:['hi','높음','중간 산동 → 동공차단 → 급성 발작'],o:['lo','낮음','각이 열려 있어 안압 변화 거의 없음'],ph:'녹내장 종류와 레이저 시술 여부 확인. 폐쇄각 위험이면 해열진통제 단일제처럼 산동 성분 없는 약'},
+  {id:'antiH',mode:'pacg',name:'1세대 항히스타민제',ex:'chlorpheniramine, diphenhydramine(수면유도제), dimenhydrinate(멀미약)',how:'M3 차단 → 산동',n:['hi','높음','밤·어두운 곳과 겹치면 더 위험'],o:['lo','낮음','안압 변화 거의 없음'],ph:'콧물·알레르기에는 항콜린 작용이 적은 2세대 항히스타민제 고려'},
+  {id:'scop',mode:'pacg',name:'멀미 패치 · 진경제',ex:'스코폴라민 패치, 부틸스코폴라민',how:'강한 M 차단 → 산동. 손에 묻으면 한쪽 동공만',n:['hi','높음','큰 산동'],o:['lo','낮음','안압 변화 거의 없음'],ph:'패치를 붙이거나 뗀 뒤 손 씻기'},
+  {id:'antiChol',mode:'pacg',name:'항콜린 작용 처방약',ex:'과민성방광약(oxybutynin, solifenacin), 삼환계 항우울제, 파킨슨약, 일부 항정신병약, 흡입 ipratropium이 눈에 들어갈 때',how:'M 차단 → 산동',n:['hi','주의~높음','‘조절되지 않는 좁은각 녹내장’ 금기인 약이 많음'],o:['lo','낮음','안압 변화 거의 없음'],ph:'처방 의사·안과에 녹내장 종류 공유'},
+  {id:'mydr',mode:'pacg',name:'산동 점안제 (검사용)',ex:'트로피카미드 + 페닐에프린',how:'M3 차단 + α1 자극 → 최대 산동',n:['hi','높음','검사 전 전방각 평가'],o:['lo','낮음','눈부심 · 근거리 흐림'],ph:'안과에서 사용. 산동 후 운전 주의'},
+  {id:'topi',mode:'normal',name:'토피라메이트 등 설폰아미드 구조 약',ex:'토피라메이트 (드물게 아세타졸아미드, hydrochlorothiazide)',how:'모양체·맥락막 삼출 → 수정체-홍채 전방 이동 (비동공차단)',n:['hi','높음','LPI 효과 없음 · 필로카르핀 금지'],o:['hi','생길 수 있음','원래 각과 무관, 대개 양쪽 눈'],ph:'복용 초기 양쪽 눈 흐림·통증·근시화 → 즉시 중단하고 응급'},
+  {id:'steroid',mode:'poag',name:'스테로이드',ex:'점안 > 눈 주위 주사·연고 > 흡입·비강 > 경구·주사',how:'섬유주 GR → 배출 저항 ↑ (수 주)',n:['mid','주의','각과 무관하게 안압 상승'],o:['hi','높음','반응이 더 흔하고 큼'],ph:'장기 사용 시 안압 측정. 같은 약이 후낭하백내장도 만듦'},
+  {id:null,name:'티몰롤 점안 중 + 심장약 · 천식',ex:'경구 β차단제, 베라파밀, 딜티아젬 / 천식',how:'점안 티몰롤의 전신 β 차단에 더해짐',n:['all','공통','티몰롤을 쓰는 모든 환자'],o:['all','공통',''],ph:'서맥·방실차단 가중, 천식 악화 확인. 눈물점 압박 교육'},
+  {id:null,name:'브리모니딘 점안 중 + 중추억제제',ex:'MAO 억제제 / 수면제 · 알코올',how:'중추 α2 작용에 더해짐',n:['all','공통','브리모니딘을 쓰는 모든 환자'],o:['all','공통',''],ph:'MAO 억제제 병용 금기, 졸음 가중·운전 주의, 2세 미만 금기'}
+];
+const ATLAS=[
+  {grp:'방수 생성을 줄이는 약',sub:'모양체 상피',ids:['beta','a2','caiT','caiO']},
+  {grp:'방수 배출을 늘리는 약',sub:'섬유주 · 포도막공막',ids:['pga','pilo','rock']},
+  {grp:'급성 폐쇄각 응급 · 시술',sub:'폐쇄각녹내장 탭',ids:['mannitol','lpi']}
+];
+
+/* ================= state & model ================= */
+const S={mode:'normal',on:{},playing:true,chronicH:0,acuteH:0,R:1,R0:1,pas:0,scene:'base',pgaTime:'pm',
+  iop:15.8,d:3.5,closure:0,bow:0,topiS:0,steroidS:0,attack:false,riskT:0,sel:'intro',everAttack:false};
+let A={F:2.5,u:0.24,C:0.28,Pv:9,iop:15.8,Qtm:1.9,U:0.6,pe:0};
+
+function drive(on){let a1=0,am=0,dk=0;for(const k in RISK){if(on[k]){a1+=RISK[k].a1||0;am+=RISK[k].am||0;dk+=RISK[k].dk||0;}}return {a1:Math.min(a1,1.6),am:Math.min(am,2.6),dk};}
+function piloEff(on,iop){if(!on.pilo)return 0;const dr=drive(on);return (iop<40?1:0)*(1-clamp(dr.am/2,0,1));}
+function pupilTarget(on,iop,attack){
+  const dr=drive(on),pe=piloEff(on,iop);
+  let d=3.5+dr.a1+dr.am+dr.dk-1.8*pe-(on.a2?0.3:0);
+  if(attack&&pe<0.5)d=Math.max(d,5.4);
+  return {d:clamp(d,1.8,7.6),pe,dr};
+}
+function aqueous(on,closure,steroidS,topiS,iopPrev,mode){
+  const m=MODES[mode||S.mode],dr=drive(on),pe=piloEff(on,iopPrev);
+  let F=m.F;if(on.beta)F*=0.68;if(on.a2)F*=0.75;F*=Math.min(on.caiT?0.75:1,on.caiO?0.65:1);if(on.rock)F*=0.95;
+  let u=m.u;if(on.pga)u*=0.5/0.24;if(on.a2)u*=1.15;if(pe>0)u*=1-0.3*pe;u=Math.min(u,0.62);
+  let C=m.C;if(on.pga)C*=1.12;if(pe>0&&topiS<0.3)C*=1+0.6*pe;if(on.rock)C*=1.25;C*=1-0.45*steroidS;
+  if(dr.am>0)C*=1-0.06*Math.min(dr.am,2)/2;
+  const Pv=m.Pv-(on.rock?1:0);
+  /* angle blocked by acute apposition or permanent synechiae (PAS): the larger one wins, they do not stack */
+  const Ce=C*(1-Math.max(0.93*closure,0.9*S.pas)),ue=u*(1-Math.max(0.8*closure,0.5*S.pas));
+  let iop=F*(1-ue)/Ce+Pv;
+  const gold=iop;
+  if(on.mannitol)iop-=0.42*Math.max(0,iop-10);
+  iop=Math.max(iop,Pv+1.5);
+  return {F,u:ue,C:Ce,Pv,iop,gold,Qtm:F*(1-ue),U:F*ue,pe};
+}
+function baseIOP(mode){return aqueous({},0,0,0,15,mode).iop;}
+function targetIOP(){const m=MODES[S.mode];if(m.tgt)return baseIOP(S.mode)*m.tgt;if(m.narrow&&S.pas>0.2)return baseIOP(S.mode)*0.7;return null;}
+/* steady-state prediction for "what will this drug do" text */
+function predict(on){
+  const m=MODES[S.mode];let iop=S.iop,res=null,attack=S.attack,d=3.5;
+  for(let i=0;i<4;i++){
+    const P=pupilTarget(on,iop,attack);d=P.d;
+    if(m.narrow&&!on.lpi&&d>=4.6)attack=true;
+    if(on.lpi)attack=false;
+    let cl=attack?((P.pe>0.5&&iop<40)?0.15:0.85):0;
+    if(on.topi)cl=Math.max(cl,0.9+(on.pilo?0.04:0));
+    res=aqueous(on,cl,on.steroid?1:0,on.topi?1:0,iop);iop=res.iop;
+    if(attack&&P.pe>0.5&&iop<40&&cl<0.3)attack=false;
+  }
+  res.d=d;res.attack=attack;return res;
+}
+
+/* ================= geometry ================= */
+const CI_R=211,CI_CX=303.3;
+const G={};
+function corneaInX(y){const d=Y0-y;return CI_CX-Math.sqrt(Math.max(0,CI_R*CI_R-d*d));}
+function lensX(y){const d=(Y0-y)/G.ry;if(Math.abs(d)>=1)return G.cx;return G.cx-G.rx*Math.sqrt(1-d*d);}
+function bez(p0,p1,p2,p3,t){const u=1-t;return [u*u*u*p0[0]+3*u*u*t*p1[0]+3*u*t*t*p2[0]+t*t*t*p3[0],u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1]];}
+function sampleBez(p0,p1,p2,p3,n){const a=[];for(let i=0;i<=n;i++)a.push(bez(p0,p1,p2,p3,i/n));return a;}
+function xAtY(s,y){for(let i=0;i<s.length-1;i++){const a=s[i],b=s[i+1];if((y-a[1])*(y-b[1])<=0&&a[1]!==b[1])return a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);}
+  let best=s[0][0],d=1e9;for(const p of s){const dd=Math.abs(p[1]-y);if(dd<d){d=dd;best=p[0];}}return best;}
+function mirror(pts){return pts.map(p=>[p[0],H-p[1]]);}
+function D(pts,close){return 'M'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+(close?'Z':'');}
+function catmull(pts,close){
+  const n=pts.length;if(n<3)return D(pts,close);
+  const P=i=>close?pts[(i+n)%n]:pts[clamp(i,0,n-1)];
+  let d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+  const last=close?n:n-1;
+  for(let i=0;i<last;i++){const p0=P(i-1),p1=P(i),p2=P(i+1),p3=P(i+2);
+    d+='C'+(p1[0]+(p2[0]-p0[0])/6).toFixed(1)+','+(p1[1]+(p2[1]-p0[1])/6).toFixed(1)+' '+(p2[0]-(p3[0]-p1[0])/6).toFixed(1)+','+(p2[1]-(p3[1]-p1[1])/6).toFixed(1)+' '+p2[0].toFixed(1)+','+p2[1].toFixed(1);}
+  return d+(close?'Z':'');
+}
+function geom(){
+  const m=MODES[S.mode],topi=S.topiS;
+  G.rx=m.narrow?69:62;G.ry=148;
+  G.cx=(m.narrow?266:282)-36*topi-(S.on.pilo?(2+6*topi):0)+(S.on.mannitol?5:0);
+  const pr=S.d/2*30,my=Y0-pr,mx=lensX(my)-1;
+  const dil=clamp((S.d-3.5)/4,0,1),t=8+5*dil,bow=S.bow,c=S.closure,rs=8*topi;
+  const R0=[226-rs,104];
+  const cK=Math.max(c,0.8*S.pas);
+  const K=[lerp(219,205,cK)-rs*0.4,lerp(100,91,cK)];
+  const A3=[mx-t,my];
+  const ant=sampleBez(K,[K[0]-6-24*bow,K[1]+22],[A3[0]-10-16*bow,A3[1]-46],A3,24);
+  const M=[mx,my],Rp=[231-rs,106],th0=9+5*dil,nA=ant.length-1;
+  const offs=ant.map((p,i)=>[p[0]+lerp(th0,t,i/nA),p[1]+lerp(1.5,0,i/nA)]);
+  const post=[M].concat(offs.slice(0,-1).reverse(),[Rp]);
+  const hy=132,hole=[(xAtY(ant,hy)+xAtY(post,hy))/2,hy];
+  Object.assign(G,{pr,my,mx,t,bow,c,R0,K,A3,M,Rp,ant,post,dil,hole,rs});
+}
+function randAC(){
+  for(let k=0;k<14;k++){const y=rand(112,Y0-6),xl=corneaInX(y)+7,xr=(y<G.my?xAtY(G.ant,y):lensX(y))-6;if(xr-xl>4)return [rand(xl,xr),y];}
+  return [corneaInX(240)+16,240];
+}
+function randPC(){
+  for(let k=0;k<14;k++){const y=rand(118,G.my-6),xl=xAtY(G.post,y)+3,xr=lensX(y)-3;if(xr-xl>3)return [rand(xl,xr),y];}
+  return [G.Rp[0]+8,G.Rp[1]+16];
+}
+function midPC(y){return [(xAtY(G.post,y)+lensX(y))/2,y];}
+function approach(){const y=104+rand(-1,3);const xl=corneaInX(y)+3,xr=xAtY(G.ant,y);return [Math.max(xl,Math.min(xr-2,(xl+xr)/2+rand(-2,2))),y];}
+
+/* ================= SVG build ================= */
+const svg=$('#stage');
+const CB=[[211,77],[216,70],[223,60],[238,40],[256,20],[277,0],[302,-2],[298,22],[294,46],[292,62],[298,74],[287,82],[294,92],[279,97],[285,107],[268,108],[271,117],[255,114],[251,120],[240,112],[232,107],[226,103],[219,96],[214,86]];
+const CBM=[[213,78],[222,62],[238,40],[256,20],[272,2],[266,30],[252,56],[236,80],[224,94]];
+const EFF_WALL=[[214,76],[223,60],[238,40],[256,20],[277,0],[290,-12]];
+$('#cbTb').setAttribute('d',catmull(CB,true));$('#cbBb').setAttribute('d',catmull(mirror(CB),true));
+$('#cbTm').setAttribute('d',catmull(CBM,true));$('#cbBm').setAttribute('d',catmull(mirror(CBM),true));
+
+const BADGES=[
+  {key:'beta',lbl:'β',cls:'adr',x:334,y:106},{key:'a2',lbl:'α2',cls:'adr',x:372,y:106},{key:'ca',lbl:'CA',cls:'enz',x:410,y:106},
+  {key:'fp',lbl:'FP',cls:'uveo',x:334,y:40},{key:'m3cm',lbl:'M3',cls:'chol',x:372,y:40},
+  {key:'rock',lbl:'ROCK',cls:'conv',x:40,y:46,sm:1},{key:'gr',lbl:'GR',cls:'dang',x:84,y:46},
+  {key:'m3sph',lbl:'M3',cls:'chol',x:40,y:514},{key:'a1dil',lbl:'α1',cls:'adr',x:84,y:514}
+];
+const NAMES={beta:'β 수용체',a2:'α2 수용체',ca:'탄산탈수효소',fp:'FP 수용체',m3cm:'모양체근 M3',rock:'ROCK',gr:'GR',m3sph:'홍채 괄약근 M3',a1dil:'홍채 산대근 α1'};
+const bG=$('#badges'),badgeEl={};
+BADGES.forEach(b=>{
+  const g=mk('g',{class:'rcp '+b.cls,'data-key':b.key,tabindex:'0',role:'button','aria-label':NAMES[b.key]+' 설명',transform:'translate('+b.x+','+b.y+')'},bG);
+  mk('circle',{class:'selr',r:20},g);mk('circle',{class:'ring',r:17.5},g);mk('circle',{class:'body',r:14.5},g);
+  const t=mk('text',{class:'lbl'+(b.sm?' sm':''),'text-anchor':'middle',y:b.sm?3.3:4},g);t.textContent=b.lbl;
+  mk('line',{class:'slash',x1:-11,y1:11,x2:11,y2:-11},g);
+  badgeEl[b.key]=g;
+});
+
+/* optic nerve: pressure arrows */
+const parrs=$('#parrs'),PA=[];
+[146,170,194].forEach(y=>{const l=mk('line',{class:'parr',x1:470,y1:y,x2:530,y2:y},parrs);const h=mk('polygon',{class:'parh'},parrs);PA.push({l,h,y});});
+
+/* ================= chips ================= */
+function chipHTML(id,d,kind){
+  const cls='dchip'+(kind==='risk'?' bad':'')+(d.proc?' proc':'');
+  return '<button type="button" class="'+cls+'" data-drug="'+id+'" aria-pressed="'+(!!S.on[id])+'"><span class="dt"><b>'+(d.chip||d.name)+'</b><span class="sw" aria-hidden="true"></span></span><span class="ds">'+d.sub+'</span><span class="dx">'+d.exs+'</span></button>';
+}
+function renderChips(){
+  $('#dgRx').innerHTML=Object.keys(RX).filter(k=>!RX[k].only||RX[k].only.indexOf(S.mode)>=0).map(k=>chipHTML(k,RX[k],'rx')).join('');
+  $('#dgRisk').innerHTML=Object.keys(RISK).map(k=>chipHTML(k,RISK[k],'risk')).join('');
+  $('#pgaRow').hidden=!S.on.pga;
+}
+function syncChips(){$$('.dchip').forEach(b=>b.setAttribute('aria-pressed',String(!!S.on[b.dataset.drug])));$('#pgaRow').hidden=!S.on.pga;}
+function toggle(id,force){
+  const v=force===undefined?!S.on[id]:force;
+  if(v)S.on[id]=true;else delete S.on[id];
+  syncChips();updateBadges();renderOff();chartDirty=true;explainDirty=true;
+  if(v)renderDrugInfo(id);else if(S.sel)renderInfo(S.sel);
+}
+$('#dgRx').addEventListener('click',e=>{const b=e.target.closest('.dchip');if(b)toggle(b.dataset.drug);});
+$('#dgRisk').addEventListener('click',e=>{const b=e.target.closest('.dchip');if(b)toggle(b.dataset.drug);});
+$$('[data-pga]').forEach(b=>b.addEventListener('click',()=>{S.pgaTime=b.dataset.pga;$$('[data-pga]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));chartDirty=true;}));
+
+function updateBadges(){
+  const st={},on=S.on,set=(k,p)=>{st[k]=Object.assign(st[k]||{},p);};
+  if(on.pga)set('fp',{boost:1});
+  if(on.beta)set('beta',{blocked:1});
+  if(on.a2)set('a2',{boost:1});
+  if(on.caiT||on.caiO)set('ca',{blocked:1});
+  if(on.pilo){set('m3cm',{boost:1});set('m3sph',{boost:1});}
+  if(on.rock)set('rock',{blocked:1});
+  if(on.steroid)set('gr',{boost:1,bad:1});
+  const dr=drive(on);
+  if(dr.am>0){set('m3sph',{blocked:1,bad:1});set('m3cm',{blocked:1,bad:1});}
+  if(dr.a1>0)set('a1dil',{boost:1,bad:1});
+  if(on.dark&&!dr.a1)set('a1dil',{hot:1});
+  for(const k in badgeEl){const g=badgeEl[k],s=st[k]||{};['boost','blocked','bad','hot'].forEach(c=>g.classList.toggle(c,!!s[c]));g.classList.toggle('sel',S.sel===k);}
+}
+
+/* ================= info ================= */
+const info=$('#info');
+function tagH(t){return '<span class="rtag '+t[0]+'">'+t[1]+'</span>';}
+function renderInfo(key){
+  const d=INFO[key];if(!d)return;S.sel=key;
+  let h='<div class="ih">'+(d.tag?tagH(d.tag):'')+'<h3>'+d.title+'</h3></div>';
+  if(d.body)h+='<p class="note">'+d.body+'</p>';
+  if(d.list)h+='<ul class="keylist">'+d.list.map(r=>'<li><span class="kx '+r[0]+'"></span><b>'+r[1]+'</b>'+r[2]+'</li>').join('')+'</ul>';
+  if(d.dl)h+='<dl>'+d.dl.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>';
+  if(d.eff)h+='<p class="eff">'+d.eff+'</p>';
+  if(d.drugs&&d.drugs.length)h+='<div class="idr"><span>관련 약</span>'+d.drugs.map(x=>'<em>'+x+'</em>').join('')+'</div>';
+  if(d.note)h+='<p class="note">'+d.note+'</p>';
+  info.innerHTML=h;updateBadges();
+}
+function select(key){if(INFO[key])renderInfo(key);}
+function renderDrugInfo(id){
+  const rx=RX[id],rk=RISK[id],d=rx||rk;if(!d)return;
+  const m=MODES[S.mode],off=Object.assign({},S.on);delete off[id];
+  const before=predict(off),after=predict(S.on);
+  let tag=rx?(rx.proc?['chol','시술']:['drugc','치료 약']):(rk.situation?['adr','상황']:['dang','주의 약']);
+  let h='<div class="ih">'+tagH(tag)+'<h3>'+d.name+'</h3></div><p class="note">'+(d.ex||d.exs)+'</p>';
+  h+='<p class="eff">'+(rx?rx.mech:rk.why)+'</p>';
+  let now='',cls='';
+  if(rx){
+    if(id==='lpi'){now=S.attack||before.attack?'홍채에 구멍이 뚫려 방수가 동공을 거치지 않고 전방으로 갑니다. 부풀었던 홍채가 가라앉고 각이 열립니다.':'이제 이 눈은 동공이 커져도 동공차단이 생기지 않습니다. 아래 주의 약을 다시 켜 보세요.';cls='goodn';
+      if(S.pas>0.1){now+=' 다만 이미 들러붙은 각(약 '+Math.round(S.pas*100)+'%)은 열리지 않아 안압이 '+f1(after.iop)+' mmHg에 머뭅니다. 안압약이 더 필요합니다.';cls='';}}
+    else if(id==='pilo'&&S.attack&&(S.iop>=39.5||drive(S.on).am>=1)){const why=[];if(S.iop>=39.5)why.push('안압이 약 '+Math.round(S.iop)+' mmHg라 홍채 괄약근이 허혈 상태입니다');if(drive(S.on).am>=1)why.push('항콜린 성분이 켜져 있어 괄약근의 M3가 막혀 있습니다');
+      now=why.join('. 또 ')+'. 지금은 필로카르핀이 듣지 않습니다. 원인 약을 끄고 β차단제·CA 억제제·만니톨로 안압을 먼저 40 아래로 낮추세요.';cls='badn';}
+    else if(id==='pilo'&&S.on.topi){now='토피라메이트 폐쇄각에서 필로카르핀은 모양체를 더 수축시켜 수정체를 앞으로 밀고 각을 더 닫습니다. 끄세요.';cls='badn';}
+    else{const a=before.iop,b=after.iop;now='이 눈의 낮 안압 '+f1(a)+' → <b>'+f1(b)+' mmHg</b> ('+(b<=a?'−':'+')+Math.abs(Math.round((b-a)/a*100))+'%)';if(id==='pga')now+='. 오른쪽 24시간 곡선에서 점안 시각에 따른 차이를 보세요.';if(id==='beta')now+='. 밤에는 효과가 작습니다(24시간 곡선).';cls=b<a?'goodn':'';}
+    h+='<p class="now '+cls+'">'+now+'</p>';
+    h+='<div class="idr"><span>부작용</span>'+rx.se.slice(0,4).map(x=>'<em>'+x[0]+'</em>').join('')+'</div>';
+    h+='<p class="note">기대 하강 '+rx.drop+' · '+rx.when+' · <a href="#a-'+id+'">약 지도에서 자세히</a></p>';
+  }else{
+    const narrow=m.narrow;
+    if(id==='steroid'){now='수 주에 걸쳐 섬유주가 막혀 안압 '+f1(before.iop)+' → <b>'+f1(after.iop)+' mmHg</b>. '+(S.mode==='poag'?rk.open:rk.narrow);cls='badn';}
+    else if(id==='topi'){now='수정체-홍채가 통째로 앞으로 밀려 각이 닫히고 안압 '+f1(before.iop)+' → <b>'+f1(after.iop)+' mmHg</b>. '+rk.open;cls='badn';}
+    else if(narrow&&!S.on.lpi){const dd=after.d;now='동공 '+f1(before.d)+' → <b>'+f1(dd)+' mm</b>. '+(dd>=4.6?'문턱(약 4.6 mm)을 넘었습니다. '+rk.narrow:'아직 문턱(약 4.6 mm) 아래입니다. '+rk.narrow);cls=dd>=4.6?'badn':'';}
+    else if(narrow&&S.on.lpi){now='동공 '+f1(before.d)+' → '+f1(after.d)+' mm. 홍채절개술 구멍 덕분에 동공차단이 생기지 않아 각이 유지됩니다.';cls='goodn';}
+    else{now='동공 '+f1(before.d)+' → '+f1(after.d)+' mm. '+rk.open+(id!=='dark'?' 다만 환자가 자기 녹내장 종류를 모르면 확인이 먼저입니다.':'');cls='goodn';}
+    h+='<p class="now '+cls+'">'+now+'</p>';
+    if(rk.situation)h+='<p class="note">약이 아니라 생활 속 조건입니다. 폐쇄각녹내장 탭에서 다른 약과 함께 켜 보세요.</p>';
+    else h+='<p class="note"><a href="#risk">녹내장 종류별 위험 표 보기</a></p>';
+  }
+  info.innerHTML=h;
+  S.sel=d.sel||S.sel;updateBadges();
+}
+svg.addEventListener('click',e=>{const t=e.target.closest('[data-key]');if(t)select(t.dataset.key);});
+svg.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const t=e.target.closest('[data-key]');if(t){e.preventDefault();select(t.dataset.key);}});
+
+/* ================= side panels ================= */
+function renderOff(){
+  const ids=Object.keys(S.on);
+  const parts=[];
+  ids.forEach(id=>{
+    if(OFF[id])parts.push('<div class="og"><h4>'+RX[id].name+'</h4><ul>'+OFF[id].map(r=>'<li>'+r[0]+'<span>'+r[1]+'</span></li>').join('')+'</ul></div>');
+    else if(RISK[id]){const rk=RISK[id],narrow=MODES[S.mode].narrow;
+      parts.push('<div class="og"><h4>'+rk.name+'</h4><ul><li>기전<span>'+rk.sub+'</span></li><li>이 눈에서<span>'+(id==='steroid'||id==='topi'?(S.mode==='poag'||id==='topi'?rk.open:rk.narrow):(narrow&&!S.on.lpi?rk.narrow:(narrow?'홍채절개술 후라 동공차단이 생기지 않음':rk.open)))+'</span></li></ul></div>');}
+  });
+  $('#offSec').hidden=!parts.length;$('#off').innerHTML=parts.join('');
+}
+let explainDirty=true,lastExplainSig='';
+function topiClosure(){return S.on.topi&&S.topiS>0.3;}
+function renderExplain(){
+  const ex=$('#explain'),m=MODES[S.mode],on=S.on;
+  let h='';
+  if(S.attack){
+    const stopped=!['coldMed','antiH','scop','antiChol','mydr','decong','dark'].some(k=>on[k]);
+    const sup=on.beta||on.a2||on.caiT||on.caiO;
+    const pe=piloEff(on,S.iop)>0.5;
+    h='<h3 class="sh">급성 발작 응급 처치 순서 <small>켜면 체크됩니다</small></h3><ol class="chk">'+
+      '<li class="'+(stopped?'done':'')+'"><b>방아쇠 끄기</b><p>산동을 일으킨 약·상황을 끕니다. 하지만 이미 닫힌 각은 저절로 열리지 않습니다.</p></li>'+
+      '<li class="'+(sup?'done':'')+'"><b>방수 생성 줄이기</b><p>β차단제, α2 작용제, CA 억제제(점안·경구). 금기와 동반질환을 확인합니다.</p></li>'+
+      '<li class="'+(on.mannitol?'done':'')+'"><b>필요하면 만니톨 정맥</b><p>유리체 수분을 빼서 안압을 빨리 내립니다. 심부전·신기능 주의.</p></li>'+
+      '<li class="'+(pe?'done':(on.pilo?'wrong':''))+'"><b>안압이 40 아래로 내려오면 필로카르핀</b><p>'+(on.pilo&&!pe?'지금은 안압이 높거나 항콜린 약이 켜져 있어 듣지 않습니다.':'괄약근이 동공을 당겨 홍채를 각에서 떼어 냅니다.')+'</p></li>'+
+      '<li class="'+(on.lpi?'done':'')+'"><b>레이저 홍채절개술</b><p>근본 해결. 반대 눈도 예방 시술을 합니다.</p></li></ol>';
+  }else if(topiClosure()){
+    h='<h3 class="sh">약물 유발 폐쇄각 대처 <small>토피라메이트</small></h3><ol class="chk">'+
+      '<li class="'+(!on.topi?'done':'')+'"><b>원인 약 즉시 중단</b><p>대개 복용 초기에 양쪽 눈이 함께 흐려지고 아픕니다.</p></li>'+
+      '<li class="'+((on.beta||on.a2||on.caiT||on.caiO)?'done':'')+'"><b>방수 생성 줄이기</b><p>β차단제, α2 작용제, CA 억제제. 필요하면 고삼투압제.</p></li>'+
+      '<li class="'+(on.pilo?'wrong':'done')+'"><b>필로카르핀 쓰지 않기</b><p>모양체를 더 수축시켜 수정체를 앞으로 밀어 악화시킵니다.</p></li>'+
+      '<li><b>레이저 홍채절개술은 효과 없음</b><p>동공차단이 아니라 수정체-홍채가 통째로 밀린 것이기 때문입니다.</p></li>'+
+      '<li><b>전문의 치료</b><p>모양체를 이완시키는 조절마비제, 스테로이드 등으로 삼출을 줄입니다.</p></li></ol>';
+  }else if(m.narrow&&S.pas>0.2){
+    const mydOn=['coldMed','antiH','scop','antiChol','mydr','decong','dark'].some(k=>on[k]);
+    const tg=targetIOP(),okT=tg&&S.iop<=tg+0.3;
+    h='<h3 class="sh">만성 폐쇄각 관리 <small>켜면 체크됩니다</small></h3>'+
+      '<p class="muted" style="margin-bottom:10px">좁은 각이 오래·반복해서 닿거나 급성 발작이 길면 홍채가 섬유주에 영구히 들러붙습니다(주변홍채앞유착, PAS). 덮인 만큼 섬유주 배출이 줄어 안압이 높아지지만 아프지 않아, 개방각녹내장처럼 시신경이 서서히 상하다 늦게 발견됩니다.</p><ol class="chk">'+
+      '<li class="'+(on.lpi?'done':'')+'"><b>레이저 홍채절개술로 동공차단 없애기</b><p>더 들러붙거나 급성 발작이 오는 것을 막습니다. 하지만 이미 들러붙은 곳은 열지 못해 안압은 크게 안 내려갑니다.</p></li>'+
+      '<li class="'+(okT?'done':'')+'"><b>남은 고안압은 안압약으로</b><p>PGA부터 시작하고, 모자라면 다른 기전의 약을 더합니다.</p></li>'+
+      '<li><b>수정체 제거(백내장 수술)로 각 넓히기</b><p>두꺼워진 수정체가 각을 좁히는 경우 수정체를 빼면 각이 넓어지고 안압이 내려갈 수 있습니다. 필요하면 녹내장 수술을 함께 고려합니다.</p></li>'+
+      '<li class="'+(mydOn&&!on.lpi?'wrong':'')+'"><b>산동 약 주의는 계속</b><p>'+(mydOn&&!on.lpi?'홍채절개술 전에는 지금 켠 약이 급성 발작까지 부를 수 있습니다.':'홍채절개술 전이라면 감기약·멀미약이 여전히 급성 발작을 부를 수 있습니다.')+'</p></li></ol>'+
+      '<p class="tgt" id="tgtLine"></p>';
+  }else if(S.mode==='normal'){
+    h='<h3 class="sh">방수 한 방울의 여정 <small>검은 알갱이를 따라가세요</small></h3><ol class="steps" id="steps">'+STEPS.map((s,i)=>'<li data-i="'+i+'"><b>'+s[0]+'</b><p>'+s[1]+'</p></li>').join('')+'</ol>';
+  }else{
+    h='<h3 class="sh">문제가 생기는 자리 <small>누르면 그림에서 표시</small></h3><ul class="prob">'+PROB[S.mode].map(p=>'<li><button type="button" class="pb" data-key="'+p.key+'">'+tagH(p.tag)+'<b>'+p.t+'</b><span>'+p.d+'</span></button></li>').join('')+'</ul>';
+    if(m.tgt)h+='<p class="tgt" id="tgtLine"></p>';
+    if(m.narrow)h+='<p class="tgt" id="tgtLine"></p>';
+  }
+  ex.innerHTML=h;
+  $$('.pb',ex).forEach(b=>b.addEventListener('click',()=>select(b.dataset.key)));
+}
+
+/* ================= particles ================= */
+const partsG=$('#parts'),pool=[],parts=[];let spawnAcc=0,tracer=null;
+const TIPS=[[258,116],[269,113],[281,106],[290,97]];
+function newPart(){
+  if(parts.length>=320)return;
+  const el=pool.pop()||mk('circle',{r:2.4},partsG);el.style.display='';
+  const tp=TIPS[(Math.random()*TIPS.length)|0];
+  const p={top:Math.random()<0.5,x:tp[0]+rand(-3,3)-5*S.topiS,y:tp[1]+rand(-2,2)+7*S.topiS,phase:'pc',pts:null,seg:0,t:0,el,op:-1,cls:''};
+  if(!tracer){tracer=p;p.tracer=true;}
+  routePC(p);setCls(p,p.tracer?'part tr':'part');el.setAttribute('r',p.tracer?3.6:2.4);
+  parts.push(p);
+}
+function setCls(p,c){if(p.cls!==c){p.cls=c;p.el.setAttribute('class',c);}}
+function kill(p,i){p.el.style.display='none';pool.push(p.el);parts.splice(i,1);if(p===tracer)tracer=null;}
+function blockedPupil(){return S.attack&&!S.on.lpi&&S.closure>0.3;}
+function routePC(p){
+  const st=[p.x,p.y];p.seg=0;p.t=0;
+  if(blockedPupil()){p.phase='pctrap';p.pts=[st,randPC()];return;}
+  const h=G.hole;
+  if(S.on.lpi&&(S.attack||Math.random()<0.45)){p.phase='pc';p.pts=[st,[258,124],[h[0]+9,h[1]+1],[h[0]-12,h[1]+4]];return;}
+  p.phase='pc';p.pts=[st,[262,126],midPC(150),midPC(Math.max(165,G.my-30)),midPC(G.my-10),[G.mx+0.5,G.my+3],[G.mx-15,G.my+12]];
+}
+function enterAC(p){p.phase='ac';p.seg=0;p.t=0;p.pts=[[p.x,p.y],randAC(),approach()];}
+function exitDecide(p){
+  if(Math.random()<Math.max(S.closure*0.96,S.pas*0.85)){enterAC(p);return;}
+  p.seg=0;p.t=0;
+  if(Math.random()<A.u){p.phase='us';p.pts=[[p.x,p.y],[229,80],[241,58],[256,34],[268,14],[277,-12]];}
+  else{p.phase='tm';p.pts=[[p.x,p.y],[207,90],[196,82],[186,75],[180,70],[175,66]];}
+}
+function segF(p){
+  if(p.phase==='tm'&&p.seg===1)return clamp(A.C/0.28,0.18,1.7);
+  if(p.phase==='us')return clamp(0.45+0.55*A.u/0.24,0.4,1.6);
+  if(p.phase==='ac'||p.phase==='pctrap')return 0.7;
+  return 1;
+}
+function moveParts(dt){
+  const rate=A.F*5.4;spawnAcc+=dt*rate;
+  while(spawnAcc>=1){spawnAcc-=1;newPart();}
+  const base=58;
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];let dist=base*dt;
+    while(dist>0&&p.seg<p.pts.length-1){
+      const a=p.pts[p.seg],b=p.pts[p.seg+1],L=Math.hypot(b[0]-a[0],b[1]-a[1])||0.01,f=segF(p),need=(1-p.t)*L,dd=dist*f;
+      if(dd>=need){dist-=need/f;p.seg++;p.t=0;}else{p.t+=dd/L;dist=0;}
+    }
+    if(p.seg>=p.pts.length-1){const e=p.pts[p.pts.length-1];p.x=e[0];p.y=e[1];
+      if(p.phase==='pc')enterAC(p);
+      else if(p.phase==='pctrap'){if(blockedPupil()){p.seg=0;p.t=0;p.pts=[[p.x,p.y],randPC()];}else routePC(p);}
+      else if(p.phase==='ac')exitDecide(p);
+      else{kill(p,i);continue;}
+    }else{const a=p.pts[p.seg],b=p.pts[p.seg+1];p.x=lerp(a[0],b[0],p.t);p.y=lerp(a[1],b[1],p.t);}
+    if(p.phase==='tm'&&p.seg>=3)setCls(p,'part pv');
+    else if(p.phase==='us'&&p.seg>=1)setCls(p,p.tracer?'part tr':'part pu');
+    const op=p.phase==='us'?clamp(1-(p.seg+p.t)/5.5,0.1,1):(p.phase==='tm'&&p.seg>=3?clamp(1-(p.seg+p.t-3)/2,0,1):1);
+    p.el.setAttribute('cx',p.x.toFixed(1));p.el.setAttribute('cy',(p.top?p.y:H-p.y).toFixed(1));
+    if(Math.abs(op-p.op)>0.05){p.op=op;p.el.setAttribute('opacity',op.toFixed(2));}
+  }
+  const ring=$('#trRing');
+  if(tracer){ring.hidden=false;ring.setAttribute('cx',tracer.x.toFixed(1));ring.setAttribute('cy',(tracer.top?tracer.y:H-tracer.y).toFixed(1));}else ring.hidden=true;
+}
+function tracerStep(){if(!tracer)return -1;const p=tracer;if(p.phase==='pc'||p.phase==='pctrap')return p.seg<1?0:1;if(p.phase==='ac')return 2;if(p.phase==='tm')return 3;if(p.phase==='us')return 4;return -1;}
+
+/* ================= optic nerve ================= */
+let fiberSig='',FIB=[];const fibG=$('#fibers'),dotG=$('#adots');
+const LOSS_ORDER=['b','b','t','b','b','t','b','t','b','t','t','t'];
+function cdRatio(){return 0.3+0.62*(1-S.R);}
+function buildFibers(){
+  const alive=Math.round(12*S.R),lost=12-alive;let lb=0,lt=0;for(let i=0;i<lost;i++){if(LOSS_ORDER[i]==='b')lb++;else lt++;}
+  const nT=6-lt,nB=6-lb,CD=cdRatio(),cw=36*CD,cc=170+6*(1-S.R);
+  const sig=nT+'|'+nB+'|'+cw.toFixed(1);if(sig===fiberSig)return;fiberSig=sig;
+  const tN=1.6+5.5*S.R;
+  $('#rnflT').setAttribute('x',(560-tN).toFixed(1));$('#rnflT').setAttribute('width',tN.toFixed(1));
+  $('#rnflB').setAttribute('x',(560-tN).toFixed(1));$('#rnflB').setAttribute('width',tN.toFixed(1));
+  const fx=560-tN/2,cd=6+30*smooth(0.3,0.9,CD);
+  $('#cup').setAttribute('d','M560,'+(cc-cw).toFixed(1)+' C'+(560+cd*0.7).toFixed(1)+','+(cc-cw).toFixed(1)+' '+(560+cd).toFixed(1)+','+(cc-cw*0.55).toFixed(1)+' '+(560+cd).toFixed(1)+','+cc.toFixed(1)+' C'+(560+cd).toFixed(1)+','+(cc+cw*0.55).toFixed(1)+' '+(560+cd*0.7).toFixed(1)+','+(cc+cw).toFixed(1)+' 560,'+(cc+cw).toFixed(1)+'Z');
+  $('#cupLd').setAttribute('x2',(562+cd*0.6).toFixed(1));$('#cupLd').setAttribute('y2',(cc+cw*0.5).toFixed(1));
+  fibG.innerHTML='';dotG.innerHTML='';FIB=[];
+  const topLo=134,topHi=cc-cw-1.5,botLo=cc+cw+1.5,botHi=206;
+  for(let j=0;j<nT;j++){const yr=topLo+(j+0.5)*(Math.max(2,topHi-topLo)/nT);FIB.push(fiberPts(fx,14+j*16,yr,140+j*4.2,1));}
+  for(let j=0;j<nB;j++){const yr=botHi-(j+0.5)*(Math.max(2,botHi-botLo)/nB);FIB.push(fiberPts(fx,326-j*16,yr,200-j*4.2,-1));}
+  FIB.forEach(f=>{mk('path',{class:'fiber',d:catmull(f.pts,false)},fibG);f.dots=[0,0.5].map(o=>({s:(o+Math.random()*0.3)%1,el:mk('circle',{class:'adot',r:1.9},dotG)}));
+    const sp=sampleCat(f.pts);f.sp=sp.pts;f.cum=sp.cum;f.L=sp.L;});
+}
+function fiberPts(fx,ys,yr,yn,dir){return {pts:[[fx,ys],[fx,yr-dir*26],[fx+5,yr-dir*4],[574,yr],[600,yr+(170-yr)*0.15],[620,yn],[700,yn],[790,yn]]};}
+function sampleCat(pts){const out=[];const n=pts.length;const P=i=>pts[clamp(i,0,n-1)];
+  for(let i=0;i<n-1;i++){const p0=P(i-1),p1=P(i),p2=P(i+1),p3=P(i+2);const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6],c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    for(let k=0;k<8;k++)out.push(bez(p1,c1,c2,p2,k/8));}
+  out.push(pts[n-1]);const cum=[0];for(let i=1;i<out.length;i++)cum.push(cum[i-1]+Math.hypot(out[i][0]-out[i-1][0],out[i][1]-out[i-1][1]));
+  return {pts:out,cum,L:cum[cum.length-1]};}
+function posAt(f,s){const target=s*f.L;let i=1;while(i<f.cum.length-1&&f.cum[i]<target)i++;const a=f.sp[i-1],b=f.sp[i],seg=f.cum[i]-f.cum[i-1]||1,t=(target-f.cum[i-1])/seg;return [lerp(a[0],b[0],t),lerp(a[1],b[1],t)];}
+function moveDots(dt){
+  const m=MODES[S.mode],stress=clamp((S.iop-m.thr+3)/16,0,1.6);
+  FIB.forEach(f=>f.dots.forEach(d=>{const p=posAt(f,d.s);const slow=(p[0]>584&&p[0]<608)?1/(1+4*stress):1;d.s+=dt*0.07*slow;if(d.s>1)d.s-=1;const q=posAt(f,d.s);d.el.setAttribute('cx',q[0].toFixed(1));d.el.setAttribute('cy',q[1].toFixed(1));}));
+}
+function drawONH(){
+  buildFibers();
+  const m=MODES[S.mode],bowL=2+clamp(S.iop-12,0,42)*0.32;
+  $('#lam').setAttribute('d','M598,134 Q'+(598+bowL*2).toFixed(1)+',170 598,206');
+  $('#lam').classList.toggle('weak',S.mode==='ntg');$('#lamNote').setAttribute('opacity',S.mode==='ntg'?1:0);
+  const L=26+clamp(S.iop-10,0,50)*0.5,w=1.6+S.iop/14,hi=S.iop>m.thr;
+  PA.forEach(a=>{const x2=Math.min(470+L,552);a.l.setAttribute('x2',x2-6);a.l.setAttribute('stroke-width',w.toFixed(1));a.l.classList.toggle('hi',hi);
+    a.h.setAttribute('points',(x2+2)+','+a.y+' '+(x2-8)+','+(a.y-6)+' '+(x2-8)+','+(a.y+6));a.h.classList.toggle('hi',hi);});
+  $('#parrT').textContent='안압 '+Math.round(S.iop);
+  const CD=cdRatio(),cdv=CD,cdh=0.3+(CD-0.3)*0.72;
+  const fc=$('#fcup');fc.setAttribute('rx',(30*cdh).toFixed(1));fc.setAttribute('ry',(34*cdv).toFixed(1));fc.setAttribute('cy',(432+4*(1-S.R)).toFixed(1));
+  $('#cdT').textContent='C/D '+CD.toFixed(2);
+  const Lz=1-S.R;
+  $('#vfNasal').setAttribute('opacity',smooth(0.04,0.14,Lz).toFixed(2));
+  $('#vfSup').setAttribute('opacity',smooth(0.1,0.34,Lz).toFixed(2));
+  $('#vfInf').setAttribute('opacity',smooth(0.3,0.55,Lz).toFixed(2));
+  $('#vfPer').setAttribute('opacity',smooth(0.5,0.8,Lz).toFixed(2));
+  $('#vfCen').setAttribute('opacity',smooth(0.88,1,Lz).toFixed(2));
+  $('#vfT').textContent=Lz<0.04?'정상':Lz<0.12?'코쪽 계단':Lz<0.32?'위쪽 활 모양 암점':Lz<0.55?'위·아래 활 모양 암점':Lz<0.88?'터널 시야':'중심까지 소실';
+}
+
+/* ================= anatomy draw ================= */
+let geoSig='';
+function drawAnatomy(){
+  const sig=[S.d.toFixed(2),S.bow.toFixed(3),S.closure.toFixed(3),S.topiS.toFixed(3),S.pas.toFixed(3),S.mode,!!S.on.pilo,!!S.on.mannitol,!!S.on.lpi].join();
+  if(sig===geoSig)return;geoSig=sig;
+  geom();
+  const lens=$('#lens');lens.setAttribute('cx',G.cx.toFixed(1));lens.setAttribute('rx',G.rx);lens.setAttribute('ry',G.ry);
+  $('#lensLbl').setAttribute('x',(G.cx+6).toFixed(1));
+  const t=G.t,my=G.my,A3=G.A3,M=G.M;
+  const iris=[G.R0,G.K].concat(G.ant.slice(1),[[A3[0]+t*0.3,my+3],[A3[0]+t*0.75,my+3]],G.post);
+  $('#irisT').setAttribute('d',D(iris,true));$('#irisB').setAttribute('d',D(mirror(iris),true));
+  const dil=G.post.slice(4,19).map(p=>[p[0]-1.6,p[1]]);
+  $('#dilT').setAttribute('d',D(dil));$('#dilB').setAttribute('d',D(mirror(dil)));
+  const sx=M[0]-t*0.45,sy=my-5.5;
+  $('#sphT').setAttribute('cx',sx.toFixed(1));$('#sphT').setAttribute('cy',sy.toFixed(1));
+  $('#sphB').setAttribute('cx',sx.toFixed(1));$('#sphB').setAttribute('cy',(H-sy).toFixed(1));
+  const showL=!!S.on.lpi;$('#lpiT').hidden=!showL;$('#lpiB').hidden=!showL;
+  if(showL){$('#lpiT').setAttribute('cx',G.hole[0].toFixed(1));$('#lpiT').setAttribute('cy',G.hole[1]);$('#lpiB').setAttribute('cx',G.hole[0].toFixed(1));$('#lpiB').setAttribute('cy',H-G.hole[1]);}
+  // anterior chamber fill
+  const cor=[];for(let y=96;y<=464;y+=8)cor.push([corneaInX(y),y]);cor.push([corneaInX(464),464]);
+  const lensF=[];for(let y=H-my;y>=my;y-=6)lensF.push([lensX(y)-0.5,y]);
+  const ac=cor.concat([[206,460]],mirror([G.K].concat(G.ant)),lensF,G.ant.slice().reverse(),[[206,100]]);
+  $('#acFill').setAttribute('d',D(ac,true));
+  // posterior chamber
+  const pc=G.post.slice().reverse();const lensP=[];for(let y=my;y>=Y0-G.ry+4;y-=6)lensP.push([lensX(y)+1,y]);
+  const pcT=pc.concat(lensP,[[G.cx,Y0-G.ry+2],[282,110],[262,116],[244,110]]);
+  $('#pcT').setAttribute('d',D(pcT,true));$('#pcB').setAttribute('d',D(mirror(pcT),true));
+  // zonules
+  const eqY=Y0-G.ry,zt=[[271,117],[284,107],[292,98]],ze=[[G.cx-6,eqY+4],[G.cx,eqY+1],[G.cx+8,eqY+3]];
+  let zd='';zt.forEach((a,i)=>{zd+='M'+(a[0]-5*S.topiS)+','+(a[1]+7*S.topiS)+' L'+ze[i][0].toFixed(1)+','+ze[i][1];});
+  $('#zonT').setAttribute('d',zd);$('#zonB').setAttribute('d',zd.replace(/(-?\d+\.?\d*),(-?\d+\.?\d*)/g,(m0,x,y)=>x+','+(H-parseFloat(y)).toFixed(1)));
+  // ciliary body rotation & effusion (topiramate)
+  const s=S.topiS,tr='translate('+(-5*s).toFixed(2)+','+(7*s).toFixed(2)+')',trb='translate('+(-5*s).toFixed(2)+','+(-7*s).toFixed(2)+')';
+  $('#cbT').setAttribute('transform',tr);$('#cbB').setAttribute('transform',trb);
+  if(s>0.02){const inner=EFF_WALL.map(p=>[p[0]-6*s+1,p[1]+9*s+1]).reverse();const e=EFF_WALL.concat(inner);
+    $('#effT').setAttribute('d',D(e,true));$('#effB').setAttribute('d',D(mirror(e),true));}
+  else{$('#effT').setAttribute('d','');$('#effB').setAttribute('d','');}
+  $('#effLbl').setAttribute('opacity',s>0.3?1:0);
+  // closure marks
+  const cl=smooth(0.35,0.7,S.closure);
+  $('#tmcT').setAttribute('opacity',(cl*0.55).toFixed(2));$('#tmcB').setAttribute('opacity',(cl*0.55).toFixed(2));
+  $('#closedLbl').setAttribute('opacity',cl.toFixed(2));
+  // synechiae (PAS): iris periphery glued to the trabecular meshwork
+  const pv=smooth(0.08,0.35,S.pas),K=G.K,ka=G.ant[2];
+  const pb=[[K[0]-1,K[1]-3],[204,94],[203,99],[ka[0]+1,ka[1]+1],[K[0]+4,K[1]+4]];
+  $('#pasT').setAttribute('d',D(pb,true));$('#pasB').setAttribute('d',D(mirror(pb),true));
+  $('#pasT').setAttribute('opacity',(pv*0.9).toFixed(2));$('#pasB').setAttribute('opacity',(pv*0.9).toFixed(2));
+  $('#pasLblG').setAttribute('opacity',(pv*(1-cl)).toFixed(2));
+  // iris leaders
+  const il=G.post[12];$('#irisLd').setAttribute('x2',(il[0]-6).toFixed(1));$('#irisLd').setAttribute('y2',(H-il[1]).toFixed(1));
+  const ls=$('#ldSph');ls.setAttribute('x1',40);ls.setAttribute('y1',499);ls.setAttribute('x2',sx.toFixed(1));ls.setAttribute('y2',(H-sy+5).toFixed(1));
+  const dp=G.post[14],ld=$('#ldDil');ld.setAttribute('x1',84);ld.setAttribute('y1',499);ld.setAttribute('x2',(dp[0]-1).toFixed(1));ld.setAttribute('y2',(H-dp[1]).toFixed(1));
+}
+function drawVisualPressure(){
+  const v=clamp((S.iop-16)/38,0,1);
+  $('#acFill').setAttribute('fill-opacity',(0.75+0.25*v).toFixed(2));
+  $('#haze').style.opacity=(smooth(34,55,S.iop)*0.55).toFixed(2);
+  const fl=Math.max(smooth(34,50,S.iop)*0.75,S.on.pga?0.28:0,S.on.rock?0.38:0);
+  $('#flushT').style.opacity=fl.toFixed(2);$('#flushB').style.opacity=fl.toFixed(2);
+  const cv=clamp(A.Qtm/1.9,0.15,1.6),uv=clamp(A.U/0.6,0.15,2.4);
+  const shut=Math.max(S.closure,0.8*S.pas);
+  ['#rtCvT','#rtCvB'].forEach(s=>{const e=$(s);e.setAttribute('stroke-width',(1.4+1.2*cv).toFixed(1));e.setAttribute('opacity',(0.25+0.4*Math.min(cv,1)*(1-shut)).toFixed(2));});
+  ['#rtUsT','#rtUsB'].forEach(s=>{const e=$(s);e.setAttribute('stroke-width',(1.2+1.0*uv).toFixed(1));e.setAttribute('opacity',(0.2+0.25*Math.min(uv,2)*(1-S.closure)).toFixed(2));});
+}
+
+/* ================= readouts ================= */
+function fmtTime(h){if(h<48)return Math.round(h)+'시간';if(h<24*60)return Math.round(h/24)+'일';const mo=Math.round(h/730);const y=Math.floor(mo/12),r=mo%12;return (y?y+'년 ':'')+(r||!y?r+'개월':'');}
+let lastRead=0;
+function readouts(){
+  const m=MODES[S.mode],on=S.on,iop=S.iop,tg=targetIOP();
+  const iv=$('#iopV');iv.textContent=f1(iop);
+  const lvl=iop>30?'hi':iop>21||(tg&&iop>tg+0.3)||iop>m.thr?'mid':(tg?'okv':'');
+  iv.className=lvl;
+  const fill=$('#iopFill');fill.style.width=clamp(iop/60*100,0,100)+'%';fill.className=lvl==='hi'?'hi':lvl==='mid'?'mid':'';
+  const te=$('#iopTgt');if(tg){te.hidden=false;te.style.left=(tg/60*100)+'%';}else te.hidden=true;
+  $('#iopNote').textContent=tg?'세로 막대 = 목표 안압 '+f1(tg)+' mmHg (기저 '+f1(baseIOP(S.mode))+'보다 30%↓) · 초록 띠 = 흔한 정상 범위':'초록 띠 = 흔히 쓰는 정상 범위 10–21 mmHg (이것만으로 녹내장 여부를 정하지 않음)';
+  const man=on.mannitol?' − 만니톨 '+f1(A.gold-A.iop):'';
+  $('#eqN').innerHTML='= ('+f2(A.F)+' − '+f2(A.U)+') ÷ '+A.C.toFixed(3)+' + '+f1(A.Pv)+man+' = <b>'+f1(A.iop)+'</b>';
+  const bw=(id,v,max)=>{$(id).style.width=clamp(v/max*100,0,100)+'%';};
+  bw('#bF',A.F,3);bw('#bT',A.Qtm,3);bw('#bU',A.U,3);
+  $('#vF').textContent=f2(A.F)+' μL/분';$('#vT').textContent=f2(A.Qtm)+' μL/분';$('#vU').textContent=f2(A.U)+' μL/분';
+  // stats
+  const angle=S.closure>0.5?['닫힘','홍채가 섬유주를 덮음',1]:S.pas>0.2?['일부 유착','들러붙은 곳은 LPI로 안 열림',1]:m.narrow&&!on.lpi&&!S.on.topi?['좁음','약 15° · 폐쇄 가능',0]:S.closure>0.2?['좁아지는 중','',1]:['열림','약 35°',0];
+  const dr=drive(on);
+  const block=m.narrow&&!on.lpi?clamp((S.d-3.6)/1.0,0,1):0;
+  let rows=[['동공 지름',f1(S.d)+' mm',S.d>=5.5?'산동':S.d<=2.6?'축동':'보통',S.d>=5.5],
+    ['전방각',angle[0],angle[1],angle[2]]];
+  if(m.narrow)rows.push(['동공차단 위험',on.lpi?'없음':Math.round(block*100)+'%',on.lpi?'홍채절개술 후':'문턱 약 4.6 mm',block>=1]);
+  if(m.narrow&&S.pas>0.02)rows.push(['들러붙은 각 (PAS)','약 '+Math.round(S.pas*100)+'%','섬유주가 영구히 덮임',S.pas>0.2]);
+  rows.push(['시신경 축삭',Math.round(S.R*100)+'%','C/D '+cdRatio().toFixed(2),S.R<0.7]);
+  rows.push(['손상이 시작되는 안압',m.thr+' mmHg',S.mode==='ntg'?'약한 시신경 (모델)':'모델 값',false]);
+  $('#stats').innerHTML=rows.map(r=>'<div class="st'+(r[3]?' bad':'')+'"><dt>'+r[0]+'</dt><dd><b>'+r[1]+'</b><span>'+r[2]+'</span></dd></div>').join('');
+  // symptoms
+  const sx=[['시야 결손',S.R<0.88,0],['눈 통증 · 두통',iop>35||(on.pilo&&!S.attack),0],['충혈',iop>35||on.pga||on.rock,iop<=35],['무지개 달무리',iop>38,0],['구역 · 구토',iop>40,0],['시력 저하 · 근시화',iop>40||S.topiS>0.4||(on.pilo&&!S.attack),0],['눈부심',S.d>=5.5,1],['밤에 어둡게',S.d<=2.6,1],['졸음',!!on.a2,1],['쓴맛',!!on.caiT,1]];
+  $('#sxChips').innerHTML=sx.map(s=>'<span class="sx'+(s[2]?' side':'')+(s[1]?' on':'')+'">'+s[0]+'</span>').join('');
+  // pill
+  let pill='정상 안압',pc='',sub='방수 생성과 배출이 균형',alert='';
+  if(S.attack){pill='급성 폐쇄각 발작';pc='alert';sub='안압 급상승 · 응급';
+    alert='<p><b>안압 '+Math.round(iop)+' mmHg.</b> 부푼 홍채가 섬유주를 덮었습니다. 실제라면 눈 통증·충혈·달무리·두통·구토가 오고, 몇 시간~며칠 안에 시신경을 잃을 수 있는 응급입니다.</p>'+(on.pilo&&piloEff(on,iop)<0.5?'<p>필로카르핀이 듣지 않습니다. '+(dr.am>=1?'항콜린 성분이 괄약근 M3를 막고 있습니다. ':'')+(iop>=40?'안압 40 이상에서는 홍채 괄약근이 허혈 상태입니다. 먼저 방수 생성을 줄이세요.':'')+'</p>':'')+'<button type="button" class="btn sm" data-go="explain">응급 처치 순서 보기</button>';}
+  else if(topiClosure()&&S.closure>0.4){pill='약물 유발 폐쇄각';pc='alert';sub='양쪽 눈 · 비동공차단';
+    alert='<p><b>토피라메이트</b>로 모양체에 삼출이 생겨 수정체-홍채가 통째로 앞으로 밀렸습니다. 레이저 홍채절개술은 듣지 않고 필로카르핀은 악화시킵니다.</p><button type="button" class="btn sm" data-go="explain">대처 순서 보기</button>';}
+  else if(m.narrow&&S.pas>0.2){if(iop>m.thr+0.2){pill='만성 폐쇄각 · 진행 중';pc='warn';sub='아프지 않은데 유착 때문에 안압이 높음';}else{pill='만성 폐쇄각 · 조절됨';pc='ok';sub='안압이 손상 시작선 아래';}}
+  else if(m.narrow){if(on.lpi){pill='홍채절개술 후';pc='ok';sub='동공차단 위험 낮음';}else if(block>=0.6){pill='폐쇄 위험 ↑';pc='warn';sub='동공이 커지는 중';}else{pill='좁은 전방각';pc='';sub='평소 안압은 정상';}}
+  else if(S.mode==='poag'||S.mode==='ntg'){if(iop>m.thr+0.2){pill='진행 중';pc='warn';sub=S.mode==='ntg'?'정상 범위 안압인데도 시신경이 상함':'안압이 시신경이 견디는 선보다 높음';}else{pill='진행 멈춤';pc='ok';sub='안압이 손상 시작선 아래';}}
+  else if(iop>21){pill='고안압';pc='warn';sub=on.steroid?'스테로이드 반응':'정상 범위를 넘음';}
+  $('#phPill').textContent=pill;$('#phPill').className='pill '+pc;$('#phSub').textContent=sub;
+  const al=$('#alert');if(alert){if(al.dataset.sig!==alert){al.innerHTML=alert;al.dataset.sig=alert;}al.hidden=false;}else{al.hidden=true;al.dataset.sig='';}
+  // clock
+  const acute=isAcute();
+  $('#tnote').textContent='시신경 시계 1초 ≈ '+(acute?'2시간 (응급)':'3개월');
+  $('#clkT').textContent=acute?'발작 '+fmtTime(S.acuteH)+'째':fmtTime(S.chronicH);
+  $('#clkR').textContent='축삭 '+Math.round(S.R*100)+'% 남음';
+  const r=$('#rateT');const ex=iop-m.thr;
+  if(ex>0.2){const perYr=(0.0036*Math.pow(ex,1.2)+(acute?8.2e-5*Math.pow(Math.max(0,iop-35),1.5)*8760:0))*100;
+    r.className='rate badr';r.textContent=acute?'시간 단위로 축삭을 잃는 중 (시간당 약 '+(perYr/8760).toFixed(2)+'%)':'진행 중 · 1년에 축삭 약 '+perYr.toFixed(1)+'% 소실 (모델)';}
+  else{r.className='rate goodr';r.textContent=S.R<1-0.005?'진행 멈춤 · 이미 잃은 '+Math.round((1-S.R)*100)+'%는 돌아오지 않습니다':'진행 없음 · 안압이 손상 시작선 아래';}
+  // target line
+  const tl=$('#tgtLine');
+  if(tl){if(tg){const ok=iop<=tg+0.3;tl.className='tgt '+(ok?'good':'bad');tl.innerHTML=ok?'목표 안압 '+f1(tg)+' mmHg 이하 <b>도달</b>. '+(iop<=m.thr?'시신경 손상이 멈춥니다.':'')
+      :'목표 안압 '+f1(tg)+' mmHg까지 '+f1(iop-tg)+' mmHg 남음. PGA로 시작하고, 모자라면 다른 기전의 약을 더해 보세요.';}
+    else if(m.narrow){tl.className='tgt '+(on.lpi?'good':'');tl.innerHTML=on.lpi?'홍채절개술로 후방과 전방이 직접 연결되었습니다. 이제 감기약을 켜도 발작이 일어나지 않습니다.':'이 눈은 평소 안압이 정상이라 안약을 쓰지 않을 수 있습니다. 근본 예방은 <b>레이저 홍채절개술</b>입니다.';}}
+  // steps highlight
+  const stp=$('#steps');if(stp){const k=tracerStep();$$('li',stp).forEach((li,i)=>li.classList.toggle('now',i===k));}
+}
+$('#alert').addEventListener('click',e=>{if(e.target.closest('[data-go]'))$('#explain').scrollIntoView({behavior:'smooth',block:'center'});});
+function isAcute(){return S.attack||(topiClosure()&&S.closure>0.5);}
+
+/* ================= 24h chart ================= */
+let chartDirty=true,chartSig='';
+const cv=$('#chart');
+function iopAt(h,useDrugs){
+  const m=MODES[S.mode],on=S.on,night=(h>=23||h<6),morning=(h>=6&&h<8);
+  let F=m.F*(night?0.8:1),u=m.u,C=m.C,Pv=m.Pv+(night?5:0)+(morning?2:0);
+  if(useDrugs){
+    if(on.beta)F*=1-0.32*(night?0.3:1);
+    if(on.a2){F*=0.75;u*=1.15;}
+    F*=Math.min(on.caiT?0.75:1,on.caiO?0.65:1);
+    if(on.rock){F*=0.95;C*=1.25;Pv-=1;}
+    if(on.pga){const dose=S.pgaTime==='pm'?21:9,t=((h-dose)%24+24)%24,e=0.72+0.28*Math.exp(-Math.pow((t-10)/5,2));u=u+(0.5-u)*e;C*=1+0.12*e;}
+    if(on.pilo&&piloEff(on,S.iop)>0){u*=0.7;C*=1.6;}
+  }
+  C*=1-0.45*S.steroidS;
+  const cl=S.closure,Ce=C*(1-Math.max(0.93*cl,0.9*S.pas)),ue=Math.min(u,0.62)*(1-Math.max(0.8*cl,0.5*S.pas));
+  let iop=F*(1-ue)/Ce+Pv;if(useDrugs&&on.mannitol)iop-=0.42*Math.max(0,iop-10);
+  return Math.max(iop,Pv+1.5);
+}
+function drawChart(){
+  const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
+  const w=cv.clientWidth||400,h=190,dpr=window.devicePixelRatio||1;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  const pl=30,pr=10,pt=10,pb=22,W=w-pl-pr,Hh=h-pt-pb;
+  const base=[],cur=[];for(let x=0;x<=24;x+=0.25){const hh=(18+x)%24;base.push(iopAt(hh,false));cur.push(iopAt(hh,true));}
+  const all=base.concat(cur);let lo=Math.min(...all),hi=Math.max(...all);
+  lo=Math.max(0,Math.floor((Math.min(lo,10)-2)/5)*5);hi=Math.ceil((Math.max(hi,22)+2)/5)*5;
+  const X=x=>pl+x/24*W,Y=v=>pt+(1-(v-lo)/(hi-lo))*Hh;
+  ctx.fillStyle=col('--surface-2');ctx.fillRect(X(5),pt,X(12)-X(5),Hh);
+  ctx.font='500 10.5px '+col('--font');ctx.fillStyle=col('--ink-3');ctx.fillText('밤 · 누운 자세',X(5)+4,pt+11);
+  if(S.on.pga){ctx.fillStyle=col('--drug-soft');const d=S.pgaTime==='pm'?3:15;[[d+8,d+12]].forEach(([a,b])=>{const seg=[[a,b]];if(b>24)seg.splice(0,1,[a,24],[0,b-24]);seg.forEach(s=>ctx.fillRect(X(Math.min(s[0],24)),pt,X(Math.min(s[1],24))-X(Math.min(s[0],24)),Hh));});}
+  ctx.strokeStyle=col('--line');ctx.lineWidth=1;ctx.fillStyle=col('--ink-3');ctx.textAlign='right';
+  const stp=(hi-lo)>30?10:5;for(let v=lo;v<=hi;v+=stp){ctx.beginPath();ctx.moveTo(pl,Y(v));ctx.lineTo(w-pr,Y(v));ctx.stroke();ctx.fillText(String(v),pl-5,Y(v)+3);}
+  ctx.textAlign='center';['18','21','0','3','6','9','12','15','18'].forEach((t,i)=>ctx.fillText(t,X(i*3),h-6));
+  ctx.setLineDash([4,3]);ctx.strokeStyle=col('--ok');ctx.beginPath();ctx.moveTo(pl,Y(21));ctx.lineTo(w-pr,Y(21));ctx.stroke();
+  const tg=targetIOP();if(tg){ctx.strokeStyle=col('--ink');ctx.beginPath();ctx.moveTo(pl,Y(tg));ctx.lineTo(w-pr,Y(tg));ctx.stroke();ctx.textAlign='left';ctx.fillStyle=col('--ink');ctx.fillText('목표',pl+3,Y(tg)-3);}
+  const line=(arr,c,lw,dash)=>{ctx.setLineDash(dash||[]);ctx.strokeStyle=c;ctx.lineWidth=lw;ctx.beginPath();arr.forEach((v,i)=>{const x=X(i*0.25),y=Y(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();};
+  line(base,col('--ink-3'),1.5,[5,4]);line(cur,col('--conv'),2.4);ctx.setLineDash([]);
+  if(S.on.pga){const d=S.pgaTime==='pm'?3:15;ctx.fillStyle=col('--drug');ctx.beginPath();ctx.moveTo(X(d),pt+Hh);ctx.lineTo(X(d)-5,pt+Hh-9);ctx.lineTo(X(d)+5,pt+Hh-9);ctx.closePath();ctx.fill();ctx.textAlign='center';ctx.fillText('점안',X(d),pt+Hh-12);}
+  const mean=a=>a.reduce((s,v)=>s+v,0)/a.length,mx=a=>Math.max(...a),mn=a=>Math.min(...a);
+  const ci=cur.indexOf(mx(cur)),peakH=Math.round((18+ci*0.25)%24);
+  let txt='지금: 평균 <b>'+f1(mean(cur))+'</b> · 최고 <b>'+f1(mx(cur))+'</b> ('+peakH+'시) · 변동폭 <b>'+f1(mx(cur)-mn(cur))+'</b> mmHg';
+  if(S.on.pga){const keep=S.pgaTime;S.pgaTime=keep==='pm'?'am':'pm';const alt=[];for(let x=0;x<=24;x+=0.25)alt.push(iopAt((18+x)%24,true));S.pgaTime=keep;
+    txt+='<br>'+(keep==='pm'?'아침 9시':'저녁 9시')+'에 넣었다면: 평균 '+f1(mean(alt))+' · 최고 '+f1(mx(alt))+' · 변동폭 '+f1(mx(alt)-mn(alt));}
+  else if(!S.attack)txt+='<br>PGA를 켜고 점안 시각을 바꿔 보세요.';
+  if(isAcute())txt+='<br>급성 폐쇄각에서는 하루 곡선보다 몇 시간 안에 안압을 내리는 것이 목표입니다.';
+  $('#cStat').innerHTML=txt;
+}
+
+/* ================= atlas & risk table ================= */
+function renderAtlas(){
+  $('#atlasBody').innerHTML=ATLAS.map(g=>'<div class="ag"><h3>'+g.grp+'<span>'+g.sub+'</span></h3><div class="acards">'+g.ids.map(id=>{const d=RX[id];
+    return '<article class="dcard" id="a-'+id+'"><header><h4>'+d.name+'</h4><span class="rtag '+d.cls+'">'+(d.proc?'시술':'단독 '+d.drop)+'</span></header><dl>'+
+      '<dt>대표</dt><dd>'+d.ex+'</dd><dt>기전</dt><dd>'+d.mech+'</dd><dt>점안 · 투여</dt><dd>'+d.when+'</dd>'+
+      '<dt>부작용과 이유</dt><dd><ul class="sel">'+d.se.map(s=>'<li>'+s[0]+'<span>'+s[1]+'</span></li>').join('')+'</ul></dd>'+
+      '<dt>확인할 것</dt><dd><ul class="cl">'+d.caution.map(c=>'<li>'+c+'</li>').join('')+'</ul></dd></dl>'+
+      '<button type="button" class="btn sm" data-sim="'+id+'">시뮬레이터에서 켜기</button></article>';}).join('')+'</div></div>').join('')+
+    '<div class="ag"><h3>복합제와 새 약<span>점안 횟수 줄이기 · 새로운 표적</span></h3><div class="acards">'+
+    '<article class="dcard"><header><h4>고정복합제</h4><span class="rtag ink">두 기전을 한 병에</span></header><ul class="combo">'+
+    '<li><b>PGA + 티몰롤</b><span>잘라콤, 듀오트라바, 간포트 · 배출 증가 + 생성 감소</span></li>'+
+    '<li><b>도르졸라미드 + 티몰롤</b><span>코솝트</span></li><li><b>브리모니딘 + 티몰롤</b><span>콤비간</span></li>'+
+    '<li><b>브린졸라미드 + 브리모니딘</b><span>심브린자 · β차단제가 없어 천식·서맥 환자에서 선택지</span></li></ul>'+
+    '<p class="muted">점안 횟수는 줄지만 각 성분의 금기는 그대로입니다. 티몰롤이 든 복합제는 천식·서맥·방실차단을 똑같이 확인합니다.</p></article>'+
+    '<article class="dcard"><header><h4>새로운 표적</h4><span class="rtag uveo">FP 이외</span></header><ul class="combo">'+
+    '<li><b>Latanoprostene bunod</b><span>FP 수용체 신호 + NO 공여 → cGMP → 섬유주 이완으로 배출 저항을 한 번 더 낮춤</span></li>'+
+    '<li><b>오미데네팍(omidenepag isopropyl)</b><span>EP2 수용체 작용제. 결막충혈, 눈부심, 인공수정체안에서 황반부종 위험 고려</span></li></ul>'+
+    '<p class="muted">국내 허가·도입 여부와 사용 조건은 제품별로 확인하세요.</p></article></div></div>';
+  const tb=$('#riskTbl tbody');
+  tb.innerHTML=RISKROWS.map(r=>'<tr><td><b>'+r.name+'</b><small>'+r.ex+'</small></td><td>'+r.how+'</td>'+
+    '<td><span class="lv '+r.n[0]+'">'+r.n[1]+'</span><small>'+r.n[2]+'</small></td>'+
+    '<td><span class="lv '+r.o[0]+'">'+r.o[1]+'</span><small>'+r.o[2]+'</small></td><td>'+r.ph+'</td>'+
+    '<td>'+(r.id?'<button type="button" class="btn sm" data-risk="'+r.id+'" data-mode="'+r.mode+'">켜 보기</button>':'')+'</td></tr>').join('');
+}
+document.addEventListener('click',e=>{
+  const s=e.target.closest('[data-sim]');
+  if(s){const id=s.dataset.sim,d=RX[id];let mode=S.mode;if(d.only&&d.only.indexOf(mode)<0)mode=d.only[0];else if(mode==='normal')mode='poag';
+    if(mode!==S.mode)setMode(mode);if(id==='lpi'||id==='mannitol'){if(!S.on.coldMed)toggle('coldMed',true);}
+    toggle(id,true);$('#stageCard').scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const r=e.target.closest('[data-risk]');
+  if(r){const mode=r.dataset.mode;if(mode!==S.mode)setMode(mode);toggle(r.dataset.risk,true);$('#stageCard').scrollIntoView({behavior:'smooth',block:'start'});}
+});
+
+/* ================= mode / reset ================= */
+function setMode(mode){
+  S.mode=mode;S.on={};S.attack=false;S.riskT=0;S.R=S.R0=MODES[mode].R0;S.chronicH=0;S.acuteH=0;S.topiS=0;S.steroidS=0;S.closure=0;S.pas=0;
+  S.bow=MODES[mode].narrow?0.3:0;S.d=3.5;
+  A=aqueous({},0,0,0,15);S.iop=A.iop;
+  $$('.mode').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.mode===mode)));
+  $('#scenes').hidden=!MODES[mode].narrow;markScene('base');
+  renderChips();updateBadges();renderOff();renderInfo('intro');explainDirty=true;chartDirty=true;geoSig='';fiberSig='';
+  for(let i=parts.length-1;i>=0;i--)kill(parts[i],i);
+  prefill();
+}
+$$('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+const SCENE_NOTE={
+  base:'각이 좁지만 아직 열려 있습니다. 평소 안압은 정상입니다. 아래 주의 약이나 ‘급성 발작 보기’로 각을 닫아 보세요.',
+  acute:'종합감기약으로 동공이 중간 크기로 커지며 발작이 시작됩니다. 오른쪽 응급 처치 순서대로 약을 켜 보세요. 발작이 길어지면 각이 들러붙습니다(PAS).',
+  chronic:'각의 약 60%가 들러붙은 상태입니다. 아프지 않은데 안압이 높고 시신경이 서서히 상합니다. 레이저 홍채절개술을 켜도 안압이 거의 그대로인 것을 확인해 보세요.'
+};
+function markScene(sc){S.scene=sc;$$('[data-scene]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.scene===sc)));$('#sceneNote').textContent=SCENE_NOTE[sc];}
+function setScene(sc){
+  setMode('pacg');
+  if(sc==='acute')toggle('coldMed',true);
+  if(sc==='chronic'){S.pas=0.6;S.R=S.R0=0.8;A=aqueous({},0,0,0,15);S.iop=A.iop;geoSig='';fiberSig='';explainDirty=true;chartDirty=true;renderInfo('pas');
+    for(let i=parts.length-1;i>=0;i--)kill(parts[i],i);prefill();}
+  markScene(sc);
+}
+$$('[data-scene]').forEach(b=>b.addEventListener('click',()=>setScene(b.dataset.scene)));
+$('#bReset').addEventListener('click',()=>{if(MODES[S.mode].narrow&&S.scene!=='base')setScene(S.scene);else setMode(S.mode);});
+$('#bClock').addEventListener('click',()=>{S.R=S.R0;S.chronicH=0;S.acuteH=0;fiberSig='';});
+$('#bPlay').addEventListener('click',()=>{S.playing=!S.playing;$('#bPlay').textContent=S.playing?'일시정지':'재생';});
+
+/* ================= main loop ================= */
+function tick(dt){
+  const m=MODES[S.mode],on=S.on;
+  S.steroidS=appr(S.steroidS,on.steroid?1:0,on.steroid?0.32:0.22,dt);
+  S.topiS=appr(S.topiS,on.topi?1:0,on.topi?0.9:0.45,dt);
+  const P=pupilTarget(on,S.iop,S.attack);
+  S.d=appr(S.d,P.d,2.0,dt);
+  const block=(m.narrow&&!on.lpi)?clamp((S.d-3.6)/1.0,0,1.5):0;
+  if(!S.attack){if(block>=1){S.riskT+=dt;if(S.riskT>1.0){S.attack=true;S.everAttack=true;explainDirty=true;chartDirty=true;}}else S.riskT=Math.max(0,S.riskT-dt*0.5);}
+  else{if(on.lpi){S.attack=false;explainDirty=true;chartDirty=true;}
+    else if(P.pe>0.5&&S.iop<40&&S.closure<0.3){S.attack=false;S.riskT=0;explainDirty=true;chartDirty=true;}}
+  const cAtt=S.attack?((P.pe>0.5&&S.iop<40)?0.15:0.85):0;
+  const cTopi=0.9*smooth(0.15,0.85,S.topiS)+(on.pilo&&S.topiS>0.3?0.04:0);
+  S.closure=appr(S.closure,clamp(Math.max(cAtt,cTopi),0,0.94),1.8,dt);
+  const bowT=(m.narrow?(on.lpi?0.08:0.3+0.25*clamp(block,0,1)):0)+(S.attack&&!on.lpi?0.85:0);
+  S.bow=appr(S.bow,bowT,2.0,dt);
+  A=aqueous(on,S.closure,S.steroidS,S.topiS,S.iop);
+  S.iop=appr(S.iop,A.iop,1.5,dt);
+  if(S.playing){
+    const acute=isAcute(),hps=acute?2:2190,dH=dt*hps;
+    if(acute)S.acuteH+=dH;else S.chronicH+=dH;
+    const ex=Math.max(0,S.iop-m.thr);
+    const rate=0.0036/8760*Math.pow(ex,1.2)+(acute?8.2e-5*Math.pow(Math.max(0,S.iop-35),1.5):0);
+    S.R=Math.max(0,S.R-rate*dH);
+    if(S.attack&&!on.lpi)S.pas=Math.min(0.75,S.pas+0.006*dH);
+  }
+}
+function prefill(){geom();for(let k=0;k<60;k++){tick(0.05);moveParts(0.05);}geoSig='';}
+let last=performance.now(),acc=0,expAcc=0,chAcc=0;
+function frame(now){
+  const real=Math.min(0.5,Math.max(0,(now-last)/1000));last=now;
+  const n=Math.max(1,Math.ceil(real/0.05)),dt=real/n;
+  for(let i=0;i<n;i++){tick(dt);if(S.playing){geom();moveParts(dt);moveDots(dt);}}
+  drawAnatomy();
+  drawVisualPressure();
+  acc+=real;if(acc>0.12){acc=0;readouts();drawONH();}
+  expAcc+=real;if(expAcc>0.4){expAcc=0;const sig=[S.mode,S.attack,topiClosure(),S.pas>0.2,Object.keys(S.on).sort().join(','),piloEff(S.on,S.iop)>0.5,S.iop<=(targetIOP()||0)+0.3].join('|');if(explainDirty||sig!==lastExplainSig){lastExplainSig=sig;explainDirty=false;renderExplain();}}
+  chAcc+=real;if(chAcc>0.5){chAcc=0;const sig=[S.mode,S.pgaTime,Object.keys(S.on).sort().join(','),S.closure.toFixed(2),S.steroidS.toFixed(2),S.pas.toFixed(2),S.attack,Math.round(S.iop)].join('|');if(chartDirty||sig!==chartSig){chartSig=sig;chartDirty=false;drawChart();}}
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize',()=>{chartDirty=true;});
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{chartDirty=true;});}catch(e){}
+new MutationObserver(()=>{chartDirty=true;}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+renderAtlas();
+setMode('normal');
+readouts();drawONH();drawChart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
